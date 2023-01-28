@@ -1,4 +1,5 @@
 provider "aws" {
+    region = "eu-central-1"
 }
 
 resource "random_id" "id" {
@@ -145,4 +146,25 @@ resource "aws_lambda_permission" "apigw" {
   principal     = "apigateway.amazonaws.com"
 
   source_arn = "${aws_apigatewayv2_api.api.execution_arn}/*/*"
+}
+
+resource "aws_dynamodb_table" "websites" {
+  name         = "websites-data"
+  billing_mode = "PAY_PER_REQUEST"
+  hash_key     = "website_url"
+
+  attribute {
+    name = "website_name"
+    type = "S"
+  }
+
+  attribute {
+    name = "website_url"
+    type = "S"
+  }
+
+  attribute {
+    name = "subscriber_chat_ids"
+    type = "SS"
+  }
 }
