@@ -1,5 +1,13 @@
 provider "aws" {
+  region = "eu-central-1"
+}
+
+terraform {
+  backend "s3" {
+    bucket = "terraform-credentials"
+    key    = "checker-bot/terraform.tfstate"
     region = "eu-central-1"
+  }
 }
 
 resource "random_id" "id" {
@@ -21,25 +29,51 @@ resource "aws_ssm_parameter" "bot_token" {
   value = var.telegram_token
 }
 
-data "external" "build" {
-  program = ["bash", "-c", <<EOT
-(make node_modules) >&2 && echo "{\"dest\": \".\"}"
+data "external" "prebuild" {
+  program = [
+    "bash", "-c", <<EOT
+mkdir -p bin
 EOT
   ]
-  working_dir = "${path.module}/src"
+  working_dir = "${path.module}/binaries"
 }
 
-data "archive_file" "lambda_zip" {
+data "external" "checker_build" {
+  program = [
+    "bash", "-c", <<EOT
+env GOOS=linux GOARCH=amd64 go build -o ../../binaries/checker
+EOT
+  ]
+  working_dir = "${path.module}/src/checker"
+}
+
+data "external" "bot_build" {
+  program = [
+    "bash", "-c", <<EOT
+env GOOS=linux GOARCH=amd64 go build -o ../../binaries/bot
+EOT
+  ]
+  working_dir = "${path.module}/src/bot"
+}
+
+
+data "archive_file" "checker_lambda_zip" {
   type        = "zip"
   output_path = "/tmp/lambda-${random_id.id.hex}.zip"
-  source_dir  = "${data.external.build.working_dir}/${data.external.build.result.dest}"
+  source_dir  = "${data.external.checker_build.working_dir}/${data.external.checker_build.result.dest}"
 }
 
-resource "aws_lambda_function" "lambda" {
-  function_name = "${random_id.id.hex}-function"
+data "archive_file" "bot_lambda_zip" {
+  type        = "zip"
+  output_path = "/tmp/bot-${random_id.id.hex}.zip"
+  source_dir  = "${data.external.bot_build.working_dir}/${data.external.bot_build.result.dest}"
+}
 
-  filename         = data.archive_file.lambda_zip.output_path
-  source_code_hash = data.archive_file.lambda_zip.output_base64sha256
+resource "aws_lambda_function" "checker_lambda" {
+  function_name = "checker-${random_id.id.hex}-function"
+
+  filename         = data.archive_file.checker_lambda_zip.output_path
+  source_code_hash = data.archive_file.checker_lambda_zip.output_base64sha256
   environment {
     variables = {
       domain          = aws_apigatewayv2_api.api.api_endpoint
@@ -49,13 +83,30 @@ resource "aws_lambda_function" "lambda" {
   }
 
   timeout = 30
-  handler = "index.handler"
-  runtime = "nodejs14.x"
+  handler = "checker"
+  runtime = "go1.x"
+  role    = aws_iam_role.lambda_exec.arn
+}
+
+resource "aws_lambda_function" "bot_lambda" {
+  function_name = "bot-${random_id.id.hex}-function"
+
+  filename         = data.archive_file.bot_lambda_zip.output_path
+  source_code_hash = data.archive_file.bot_lambda_zip.output_base64sha256
+  environment {
+    variables = {
+      token_parameter = aws_ssm_parameter.bot_token.name
+    }
+  }
+
+  timeout = 30
+  handler = "bot"
+  runtime = "go1.x"
   role    = aws_iam_role.lambda_exec.arn
 }
 
 data "aws_lambda_invocation" "set_webhook" {
-  function_name = aws_lambda_function.lambda.function_name
+  function_name = aws_lambda_function.bot_lambda.function_name
 
   input = <<JSON
 {
@@ -84,8 +135,13 @@ data "aws_iam_policy_document" "lambda_exec_role_policy" {
   }
 }
 
-resource "aws_cloudwatch_log_group" "log_group" {
-  name              = "/aws/lambda/${aws_lambda_function.lambda.function_name}"
+resource "aws_cloudwatch_log_group" "checker_log_group" {
+  name              = "/aws/lambda/${aws_lambda_function.checker_lambda.function_name}"
+  retention_in_days = 14
+}
+
+resource "aws_cloudwatch_log_group" "bot_log_group" {
+  name              = "/aws/lambda/${aws_lambda_function.bot_lambda.function_name}"
   retention_in_days = 14
 }
 
@@ -118,20 +174,36 @@ resource "aws_apigatewayv2_api" "api" {
   protocol_type = "HTTP"
 }
 
-resource "aws_apigatewayv2_integration" "api" {
+resource "aws_apigatewayv2_integration" "checker_api" {
   api_id           = aws_apigatewayv2_api.api.id
   integration_type = "AWS_PROXY"
 
   integration_method     = "POST"
-  integration_uri        = aws_lambda_function.lambda.invoke_arn
+  integration_uri        = aws_lambda_function.checker_lambda.invoke_arn
   payload_format_version = "2.0"
 }
 
-resource "aws_apigatewayv2_route" "api" {
-  api_id    = aws_apigatewayv2_api.api.id
-  route_key = "ANY /${random_id.random_path.hex}/{proxy+}"
+resource "aws_apigatewayv2_integration" "bot_api" {
+  api_id           = aws_apigatewayv2_api.api.id
+  integration_type = "AWS_PROXY"
 
-  target = "integrations/${aws_apigatewayv2_integration.api.id}"
+  integration_method     = "POST"
+  integration_uri        = aws_lambda_function.bot_lambda.invoke_arn
+  payload_format_version = "2.0"
+}
+
+resource "aws_apigatewayv2_route" "checker_api" {
+  api_id    = aws_apigatewayv2_api.api.id
+  route_key = "ANY /checker/${random_id.random_path.hex}/{proxy+}"
+
+  target = "integrations/${aws_apigatewayv2_integration.checker_api.id}"
+}
+
+resource "aws_apigatewayv2_route" "bot_api" {
+  api_id    = aws_apigatewayv2_api.api.id
+  route_key = "ANY /bot/${random_id.random_path.hex}/{proxy+}"
+
+  target = "integrations/${aws_apigatewayv2_integration.bot_api.id}"
 }
 
 resource "aws_apigatewayv2_stage" "api" {
@@ -140,31 +212,18 @@ resource "aws_apigatewayv2_stage" "api" {
   auto_deploy = true
 }
 
-resource "aws_lambda_permission" "apigw" {
+resource "aws_lambda_permission" "checker_apigw" {
   action        = "lambda:InvokeFunction"
-  function_name = aws_lambda_function.lambda.arn
+  function_name = aws_lambda_function.checker_lambda.arn
   principal     = "apigateway.amazonaws.com"
 
   source_arn = "${aws_apigatewayv2_api.api.execution_arn}/*/*"
 }
 
-resource "aws_dynamodb_table" "websites" {
-  name         = "websites-data"
-  billing_mode = "PAY_PER_REQUEST"
-  hash_key     = "website_url"
+resource "aws_lambda_permission" "bot_apigw" {
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.bot_lambda.arn
+  principal     = "apigateway.amazonaws.com"
 
-  attribute {
-    name = "website_name"
-    type = "S"
-  }
-
-  attribute {
-    name = "website_url"
-    type = "S"
-  }
-
-  attribute {
-    name = "subscriber_chat_ids"
-    type = "SS"
-  }
+  source_arn = "${aws_apigatewayv2_api.api.execution_arn}/*/*"
 }

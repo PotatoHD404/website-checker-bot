@@ -75,6 +75,8 @@ func setWebhook(w http.ResponseWriter, r *http.Request) {
 		fmt.Println(err)
 		panic("can't set webhook")
 	}
+
+	returnOk(w)
 }
 
 func handleMessage(w http.ResponseWriter, r *http.Request) {
@@ -87,6 +89,10 @@ func handleMessage(w http.ResponseWriter, r *http.Request) {
 	}
 	tgBot.ProcessUpdate(u)
 	//	return body: "ok", statusCode: 200
+	returnOk(w)
+}
+
+func returnOk(w http.ResponseWriter) {
 	w.WriteHeader(http.StatusOK)
 	_, err := w.Write([]byte("ok"))
 	if err != nil {

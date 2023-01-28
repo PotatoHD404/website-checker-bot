@@ -1,0 +1,25 @@
+name: 'Terraform init'
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    name: 'Deploy'
+    runs-on: ubuntu-latest
+    env:
+      TF_VAR_telegram_token: ${{ secrets.TF_TELEGRAM_TOKEN }}
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v3
+      - name: Pull Terraform CLI
+        uses: hashicorp/setup-terraform@v2
+      - name: Run Terraform init
+        run: |
+          terraform init \
+          -backend-config="access_key=${{ secrets.AWS_ACCESS_KEY_ID }}" \
+          -backend-config="secret_key=${{ secrets.AWS_SECRET_ACCESS_KEY }}"
+      - name: Run Terraform apply
+        run: |
+          terraform apply -input=false --auto-approve
