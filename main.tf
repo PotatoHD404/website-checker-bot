@@ -1,12 +1,16 @@
-provider "aws" {
+locals {
   region = "eu-central-1"
+}
+
+provider "aws" {
+  region = local.region
 }
 
 terraform {
   backend "s3" {
     bucket = "terraform-credentials"
     key    = "checker-bot/terraform.tfstate"
-    region = "eu-central-1"
+    region = local.region
   }
 }
 
@@ -95,7 +99,8 @@ resource "aws_lambda_function" "bot_lambda" {
   source_code_hash = data.archive_file.bot_lambda_zip.output_base64sha256
   environment {
     variables = {
-      token_parameter = aws_ssm_parameter.bot_token.name
+      TOKEN_PARAMETER = aws_ssm_parameter.bot_token.name
+      REGION          = local.region
     }
   }
 
