@@ -35,30 +35,15 @@ resource "aws_ssm_parameter" "bot_token" {
 
 resource "null_resource" "prebuild" {
   provisioner "local-exec" {
-    command = "cd ${path.module} && mkdir -p binaries"
-  }
-}
-
-resource "null_resource" "checker_build" {
-  depends_on = [null_resource.prebuild]
-  provisioner "local-exec" {
-    command = "cd ${path.module}/src/checker && env GOOS=linux GOARCH=amd64 go build -o ../../binaries/checker"
+    command = ""
   }
 }
 
 resource "null_resource" "bot_build" {
   depends_on = [null_resource.prebuild]
   provisioner "local-exec" {
-    command = "cd ${path.module}/src/bot && env GOOS=linux GOARCH=amd64 go build -o ../../binaries/bot"
+    command = "cd ${path.module} && mkdir -p binaries && mkdir binaries/bot && cd ${path.module}/src/bot && env GOOS=linux GOARCH=amd64 go build -o ../../binaries/bot/main"
   }
-}
-
-
-data "archive_file" "checker_lambda_zip" {
-  depends_on  = [null_resource.checker_build]
-  type        = "zip"
-  output_path = "/tmp/lambda-${random_id.id.hex}.zip"
-  source_dir  = "./binaries/checker"
 }
 
 data "archive_file" "bot_lambda_zip" {
@@ -66,25 +51,6 @@ data "archive_file" "bot_lambda_zip" {
   type        = "zip"
   output_path = "/tmp/bot-${random_id.id.hex}.zip"
   source_dir  = "./binaries/bot"
-}
-
-resource "aws_lambda_function" "checker_lambda" {
-  function_name = "checker-${random_id.id.hex}-function"
-
-  filename         = data.archive_file.checker_lambda_zip.output_path
-  source_code_hash = data.archive_file.checker_lambda_zip.output_base64sha256
-  environment {
-    variables = {
-      domain          = aws_apigatewayv2_api.api.api_endpoint
-      path_key        = random_id.random_path.hex
-      token_parameter = aws_ssm_parameter.bot_token.name
-    }
-  }
-
-  timeout = 30
-  handler = "checker"
-  runtime = "go1.x"
-  role    = aws_iam_role.lambda_exec.arn
 }
 
 resource "aws_lambda_function" "bot_lambda" {
@@ -100,17 +66,41 @@ resource "aws_lambda_function" "bot_lambda" {
   }
 
   timeout = 30
-  handler = "bot"
+  handler = "main"
   runtime = "go1.x"
   role    = aws_iam_role.lambda_exec.arn
 }
 
-data "aws_lambda_invocation" "set_webhook" {
+resource "aws_lambda_invocation" "set_webhook" {
   function_name = aws_lambda_function.bot_lambda.function_name
 
   input = <<JSON
 {
-	"setWebhook": true
+    "version": "2.0",
+    "routeKey": "$default",
+    "rawPath": "/",
+    "rawQueryString": "",
+    "headers": {
+    },
+    "requestContext": {
+        "accountId": "anonymous",
+        "apiId": "zkpmstc7celktxmj24j4frgeeq0tnsbi",
+        "domainName": "zkpmstc7celktxmj24j4frgeeq0tnsbi.lambda-url.eu-central-1.on.aws",
+        "domainPrefix": "zkpmstc7celktxmj24j4frgeeq0tnsbi",
+        "http": {
+            "method": "GET",
+            "path": "/",
+            "protocol": "HTTP/1.1",
+            "sourceIp": "213.108.105.86",
+            "userAgent": "PostmanRuntime/7.30.0"
+        },
+        "requestId": "c83417f3-9c82-4780-b9f4-fb5697cae66c",
+        "routeKey": "$default",
+        "stage": "$default",
+        "time": "31/Jan/2023:17:29:35 +0000",
+        "timeEpoch": 1675186175633
+    },
+    "isBase64Encoded": false
 }
 JSON
 }
@@ -136,7 +126,7 @@ data "aws_iam_policy_document" "lambda_exec_role_policy" {
 }
 
 resource "aws_cloudwatch_log_group" "checker_log_group" {
-  name              = "/aws/lambda/${aws_lambda_function.checker_lambda.function_name}"
+  name              = "/aws/lambda/${aws_lambda_function.bot_lambda.function_name}"
   retention_in_days = 14
 }
 
@@ -179,7 +169,7 @@ resource "aws_apigatewayv2_integration" "checker_api" {
   integration_type = "AWS_PROXY"
 
   integration_method     = "POST"
-  integration_uri        = aws_lambda_function.checker_lambda.invoke_arn
+  integration_uri        = aws_lambda_function.bot_lambda.invoke_arn
   payload_format_version = "2.0"
 }
 
@@ -214,7 +204,7 @@ resource "aws_apigatewayv2_stage" "api" {
 
 resource "aws_lambda_permission" "checker_apigw" {
   action        = "lambda:InvokeFunction"
-  function_name = aws_lambda_function.checker_lambda.arn
+  function_name = aws_lambda_function.bot_lambda.arn
   principal     = "apigateway.amazonaws.com"
 
   source_arn = "${aws_apigatewayv2_api.api.execution_arn}/*/*"
