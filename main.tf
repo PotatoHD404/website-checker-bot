@@ -10,7 +10,7 @@ terraform {
   backend "s3" {
     bucket = "terraform-credentials"
     key    = "checker-bot/terraform.tfstate"
-    region = local.region
+    region = "eu-central-1"
   }
 }
 
@@ -33,44 +33,39 @@ resource "aws_ssm_parameter" "bot_token" {
   value = var.telegram_token
 }
 
-data "external" "prebuild" {
-  program = [
-    "bash", "-c", <<EOT
-mkdir -p bin
-EOT
-  ]
-  working_dir = "${path.module}/binaries"
+resource "null_resource" "prebuild" {
+  provisioner "local-exec" {
+    command = "cd ${path.module} && mkdir -p binaries"
+  }
 }
 
-data "external" "checker_build" {
-  program = [
-    "bash", "-c", <<EOT
-env GOOS=linux GOARCH=amd64 go build -o ../../binaries/checker
-EOT
-  ]
-  working_dir = "${path.module}/src/checker"
+resource "null_resource" "checker_build" {
+  depends_on = [null_resource.prebuild]
+  provisioner "local-exec" {
+    command = "cd ${path.module}/src/checker && env GOOS=linux GOARCH=amd64 go build -o ../../binaries/checker"
+  }
 }
 
-data "external" "bot_build" {
-  program = [
-    "bash", "-c", <<EOT
-env GOOS=linux GOARCH=amd64 go build -o ../../binaries/bot
-EOT
-  ]
-  working_dir = "${path.module}/src/bot"
+resource "null_resource" "bot_build" {
+  depends_on = [null_resource.prebuild]
+  provisioner "local-exec" {
+    command = "cd ${path.module}/src/bot && env GOOS=linux GOARCH=amd64 go build -o ../../binaries/bot"
+  }
 }
 
 
 data "archive_file" "checker_lambda_zip" {
+  depends_on  = [null_resource.checker_build]
   type        = "zip"
   output_path = "/tmp/lambda-${random_id.id.hex}.zip"
-  source_dir  = "${data.external.checker_build.working_dir}/${data.external.checker_build.result.dest}"
+  source_dir  = "./binaries/checker"
 }
 
 data "archive_file" "bot_lambda_zip" {
+  depends_on  = [null_resource.bot_build]
   type        = "zip"
   output_path = "/tmp/bot-${random_id.id.hex}.zip"
-  source_dir  = "${data.external.bot_build.working_dir}/${data.external.bot_build.result.dest}"
+  source_dir  = "./binaries/bot"
 }
 
 resource "aws_lambda_function" "checker_lambda" {
