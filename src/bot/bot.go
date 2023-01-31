@@ -162,7 +162,7 @@ func listTables() ([]string, error) {
 	return tableNames, err
 }
 
-func createAdminsTable() {
+func createSubscribersTable() {
 	defer wg.Done()
 	_, err := dbClient.CreateTable(context.TODO(), &dynamodb.CreateTableInput{
 		AttributeDefinitions: []types.AttributeDefinition{{
@@ -176,7 +176,8 @@ func createAdminsTable() {
 			AttributeName: aws.String("name"),
 			KeyType:       types.KeyTypeHash,
 		}},
-		TableName: aws.String(subscribersTable),
+		TableName:   aws.String(subscribersTable),
+		BillingMode: types.BillingModePayPerRequest,
 	})
 	if err != nil {
 		log.Printf("Couldn't create table %v. Here's why: %v\n", subscribersTable, err)
@@ -190,32 +191,26 @@ func createAdminsTable() {
 	}
 }
 
-func createAdminIds() {
+func createAdminsTable() {
 	defer wg.Done()
 	_, err := dbClient.CreateTable(context.TODO(), &dynamodb.CreateTableInput{
 		AttributeDefinitions: []types.AttributeDefinition{{
 			AttributeName: aws.String("chatId"),
-			AttributeType: types.ScalarAttributeTypeS,
-		}, {
-			AttributeName: aws.String("url"),
 			AttributeType: types.ScalarAttributeTypeS,
 		}},
 		KeySchema: []types.KeySchemaElement{{
 			AttributeName: aws.String("chatId"),
 			KeyType:       types.KeyTypeHash,
 		}},
-		TableName: aws.String(adminsTable),
-		ProvisionedThroughput: &types.ProvisionedThroughput{
-			ReadCapacityUnits:  aws.Int64(10),
-			WriteCapacityUnits: aws.Int64(10),
-		},
+		TableName:   aws.String(adminsTable),
+		BillingMode: types.BillingModePayPerRequest,
 	})
 	if err != nil {
 		log.Printf("Couldn't create table %v. Here's why: %v\n", adminsTable, err)
 	} else {
 		waiter := dynamodb.NewTableExistsWaiter(dbClient)
 		err = waiter.Wait(context.TODO(), &dynamodb.DescribeTableInput{
-			TableName: aws.String(adminsTable)}, 5*time.Minute)
+			TableName: aws.String(adminsTable)}, 15*time.Second)
 		if err != nil {
 			log.Printf("Wait for table exists failed. Here's why: %v\n", err)
 		}
@@ -224,61 +219,39 @@ func createAdminIds() {
 
 func createMessageHistory() {
 	defer wg.Done()
-	_, err := dbClient.CreateTable(context.TODO(), &dynamodb.CreateTableInput{
-		AttributeDefinitions: []types.AttributeDefinition{{
-			AttributeName: aws.String("name"),
-			AttributeType: types.ScalarAttributeTypeS,
-		}, {
-			AttributeName: aws.String("url"),
-			AttributeType: types.ScalarAttributeTypeS,
-		}},
-		KeySchema: []types.KeySchemaElement{{
-			AttributeName: aws.String("name"),
-			KeyType:       types.KeyTypeHash,
-		}},
-		TableName: aws.String(adminsTable),
-		ProvisionedThroughput: &types.ProvisionedThroughput{
-			ReadCapacityUnits:  aws.Int64(10),
-			WriteCapacityUnits: aws.Int64(10),
-		},
-	})
-	if err != nil {
-		log.Printf("Couldn't create table %v. Here's why: %v\n", adminsTable, err)
-	} else {
-		waiter := dynamodb.NewTableExistsWaiter(dbClient)
-		err = waiter.Wait(context.TODO(), &dynamodb.DescribeTableInput{
-			TableName: aws.String(adminsTable)}, 5*time.Minute)
-		if err != nil {
-			log.Printf("Wait for table exists failed. Here's why: %v\n", err)
+	// TODO
+	panic("not implemented")
+}
+
+func contains(tables []string, table string) bool {
+	for _, t := range tables {
+		if t == table {
+			return true
 		}
 	}
+	return false
 }
 
 func setupDb() {
 	defer wg.Done()
-	// create table
-	_, err := dbClient.CreateTable(context.TODO(), &dynamodb.CreateTableInput{
-		AttributeDefinitions: []dynamodb.AttributeDefinition{
-			{
-				AttributeName: aws.String("chatId"),
-				AttributeType: dynamodb.ScalarAttributeTypeS,
-			},
-		},
-		KeySchema: []dynamodb.KeySchemaElement{
-			{
-				AttributeName: aws.String("chatId"),
-				KeyType:       dynamodb.KeyTypeHash,
-			},
-		},
-		ProvisionedThroughput: &dynamodb.ProvisionedThroughput{
-			ReadCapacityUnits:  aws.Int64(5),
-			WriteCapacityUnits: aws.Int64(5),
-		},
-		TableName: aws.String(os.Getenv("TABLE_NAME")),
-	})
+	tables, err := listTables()
 	if err != nil {
-		fmt.Println(err)
-		panic("can't create table")
+		panic("can't list tables")
+	}
+
+	if !contains(tables, subscribersTable) {
+		wg.Add(1)
+		go createSubscribersTable()
+	}
+
+	if !contains(tables, adminsTable) {
+		wg.Add(1)
+		go createAdminsTable()
+	}
+
+	if !contains(tables, messageHistoryTable) {
+		wg.Add(1)
+		go createMessageHistory()
 	}
 }
 
