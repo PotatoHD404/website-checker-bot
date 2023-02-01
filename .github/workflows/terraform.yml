@@ -33,6 +33,12 @@ jobs:
           terraform init \
           -backend-config="access_key=${{ secrets.AWS_ACCESS_KEY_ID }}" \
           -backend-config="secret_key=${{ secrets.AWS_SECRET_ACCESS_KEY }}"
+      - name: Build Go binary
+        run: |
+          mkdir ./binaries
+          mkdir ./binaries/bot
+          cd ./src
+          env GOOS=linux GOARCH=amd64 go build -o ./../binaries/bot/main .
       - name: Run Terraform apply
         run: |
           terraform apply -input=false --auto-approve

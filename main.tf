@@ -33,20 +33,17 @@ resource "aws_ssm_parameter" "bot_token" {
   value = var.telegram_token
 }
 
-data "external" "bot_build" {
-  program = ["bash", "-c", "cd ${path.root} && mkdir binaries && mkdir binaries/bot && cd ${path.root}/src && env GOOS=linux GOARCH=amd64 go build -o ${path.root}/binaries/bot/main"]
+#resource "null_resource" "bot_build" {
 #  triggers = {
 #    build_number = timestamp()
 #  }
-#  query = {
-#    # arbitrary map from strings to strings, passed
-#    # to the external program as the data query.
-#    id = "abc123"
+#  provisioner "local-exec" {
+#    command = "cd ${path.root} && mkdir binaries && mkdir binaries/bot && cd ${path.root}/src && env GOOS=linux GOARCH=amd64 go build -o ${path.root}/binaries/bot/main ."
 #  }
-}
+#}
 
 data "archive_file" "bot_lambda_zip" {
-  depends_on  = [data.external.bot_build]
+#  depends_on  = [null_resource.bot_build]
   type        = "zip"
   output_path = "/tmp/bot-${random_id.id.hex}.zip"
   source_dir  = "${path.root}/binaries/bot"
@@ -124,11 +121,6 @@ data "aws_iam_policy_document" "lambda_exec_role_policy" {
   }
 }
 
-resource "aws_cloudwatch_log_group" "checker_log_group" {
-  name              = "/aws/lambda/${aws_lambda_function.bot_lambda.function_name}"
-  retention_in_days = 14
-}
-
 resource "aws_cloudwatch_log_group" "bot_log_group" {
   name              = "/aws/lambda/${aws_lambda_function.bot_lambda.function_name}"
   retention_in_days = 14
@@ -163,15 +155,6 @@ resource "aws_apigatewayv2_api" "api" {
   protocol_type = "HTTP"
 }
 
-resource "aws_apigatewayv2_integration" "checker_api" {
-  api_id           = aws_apigatewayv2_api.api.id
-  integration_type = "AWS_PROXY"
-
-  integration_method     = "POST"
-  integration_uri        = aws_lambda_function.bot_lambda.invoke_arn
-  payload_format_version = "2.0"
-}
-
 resource "aws_apigatewayv2_integration" "bot_api" {
   api_id           = aws_apigatewayv2_api.api.id
   integration_type = "AWS_PROXY"
@@ -179,13 +162,6 @@ resource "aws_apigatewayv2_integration" "bot_api" {
   integration_method     = "POST"
   integration_uri        = aws_lambda_function.bot_lambda.invoke_arn
   payload_format_version = "2.0"
-}
-
-resource "aws_apigatewayv2_route" "checker_api" {
-  api_id    = aws_apigatewayv2_api.api.id
-  route_key = "ANY /checker/${random_id.random_path.hex}/{proxy+}"
-
-  target = "integrations/${aws_apigatewayv2_integration.checker_api.id}"
 }
 
 resource "aws_apigatewayv2_route" "bot_api" {
@@ -199,14 +175,6 @@ resource "aws_apigatewayv2_stage" "api" {
   api_id      = aws_apigatewayv2_api.api.id
   name        = "$default"
   auto_deploy = true
-}
-
-resource "aws_lambda_permission" "checker_apigw" {
-  action        = "lambda:InvokeFunction"
-  function_name = aws_lambda_function.bot_lambda.arn
-  principal     = "apigateway.amazonaws.com"
-
-  source_arn = "${aws_apigatewayv2_api.api.execution_arn}/*/*"
 }
 
 resource "aws_lambda_permission" "bot_apigw" {
