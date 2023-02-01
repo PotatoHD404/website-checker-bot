@@ -74,7 +74,7 @@ resource "aws_lambda_invocation" "set_webhook" {
 {
     "version": "2.0",
     "routeKey": "$default",
-    "rawPath": "/",
+    "rawPath": "/init-bot",
     "rawQueryString": "",
     "headers": {
     },
@@ -85,7 +85,7 @@ resource "aws_lambda_invocation" "set_webhook" {
         "domainPrefix": "zkpmstc7celktxmj24j4frgeeq0tnsbi",
         "http": {
             "method": "GET",
-            "path": "/",
+            "path": "/init-bot",
             "protocol": "HTTP/1.1",
             "sourceIp": "213.108.105.86",
             "userAgent": "PostmanRuntime/7.30.0"
@@ -166,7 +166,7 @@ resource "aws_apigatewayv2_integration" "bot_api" {
 
 resource "aws_apigatewayv2_route" "bot_api" {
   api_id    = aws_apigatewayv2_api.api.id
-  route_key = "ANY /bot/${random_id.random_path.hex}/{proxy+}"
+  route_key = "ANY /${random_id.random_path.hex}/{proxy+}"
 
   target = "integrations/${aws_apigatewayv2_integration.bot_api.id}"
 }

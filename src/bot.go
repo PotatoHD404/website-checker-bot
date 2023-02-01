@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
@@ -93,8 +94,8 @@ var adapter *httpadapter.HandlerAdapter
 func initRouter() {
 	defer wg.Done()
 	r := httprouter.New()
-	r.HandlerFunc("GET", "/initBot", initBot)
-	r.HandlerFunc("POST", "/handleMessage", handleMessage)
+	r.GET("/init-bot", initBot)
+	r.POST("/bot", handleMessage)
 	adapter = httpadapter.New(r)
 }
 
@@ -113,7 +114,7 @@ func init() {
 	wg.Wait()
 }
 
-func initBot(w http.ResponseWriter, r *http.Request) {
+func initBot(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
 	// Set webhook
 	wg.Add(2)
 
@@ -128,7 +129,7 @@ func setWebhook() {
 	defer wg.Done()
 	err := tgBot.SetWebhook(&telebot.Webhook{
 		Endpoint: &telebot.WebhookEndpoint{
-			PublicURL: os.Getenv("domain") + "/" + os.Getenv("path_key"),
+			PublicURL: os.Getenv("domain") + "/" + os.Getenv("path_key") + "/bot",
 		},
 	})
 	if err != nil {
@@ -243,7 +244,7 @@ func setupDb() {
 	}
 }
 
-func handleMessage(w http.ResponseWriter, r *http.Request) {
+func handleMessage(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
 	// Process update
 	var u telebot.Update
 	err := json.NewDecoder(r.Body).Decode(&u)
@@ -253,7 +254,13 @@ func handleMessage(w http.ResponseWriter, r *http.Request) {
 	}
 	tgBot.ProcessUpdate(u)
 
-	returnOk(w)
+	//returnOk(w)
+	w.WriteHeader(http.StatusOK)
+	_, err = w.Write([]byte(os.Getenv("domain") + "/" + os.Getenv("path_key") + "/bot"))
+	if err != nil {
+		fmt.Println(err)
+		panic("can't write response")
+	}
 }
 
 func returnOk(w http.ResponseWriter) {
@@ -266,5 +273,10 @@ func returnOk(w http.ResponseWriter) {
 }
 
 func main() {
-	lambda.Start(adapter.ProxyWithContext)
+	handler := func(ctx context.Context, req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
+		// log path
+		fmt.Println(req.Path)
+		return adapter.ProxyWithContext(ctx, req)
+	}
+	lambda.Start(handler)
 }
