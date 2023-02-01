@@ -33,24 +33,23 @@ resource "aws_ssm_parameter" "bot_token" {
   value = var.telegram_token
 }
 
-resource "null_resource" "prebuild" {
-  provisioner "local-exec" {
-    command = ""
-  }
-}
-
-resource "null_resource" "bot_build" {
-  depends_on = [null_resource.prebuild]
-  provisioner "local-exec" {
-    command = "cd ${path.module} && mkdir -p binaries && mkdir binaries/bot && cd ${path.module}/src/bot && env GOOS=linux GOARCH=amd64 go build -o ../../binaries/bot/main"
-  }
+data "external" "bot_build" {
+  program = ["bash", "-c", "cd ${path.root} && mkdir binaries && mkdir binaries/bot && cd ${path.root}/src && env GOOS=linux GOARCH=amd64 go build -o ${path.root}/binaries/bot/main"]
+#  triggers = {
+#    build_number = timestamp()
+#  }
+#  query = {
+#    # arbitrary map from strings to strings, passed
+#    # to the external program as the data query.
+#    id = "abc123"
+#  }
 }
 
 data "archive_file" "bot_lambda_zip" {
-  depends_on  = [null_resource.bot_build]
+  depends_on  = [data.external.bot_build]
   type        = "zip"
   output_path = "/tmp/bot-${random_id.id.hex}.zip"
-  source_dir  = "./binaries/bot"
+  source_dir  = "${path.root}/binaries/bot"
 }
 
 resource "aws_lambda_function" "bot_lambda" {

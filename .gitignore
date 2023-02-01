@@ -16,3 +16,9 @@
 
 .idea/
 /.env
+/.aws/
+
+.tfvars
+/.terraform/
+/.terraform.lock.hcl
+/binaries/

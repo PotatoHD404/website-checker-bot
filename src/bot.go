@@ -21,9 +21,8 @@ import (
 )
 
 const (
-	adminsTable         = "checker-admins"
-	subscribersTable    = "checker-subscribers"
-	messageHistoryTable = "checker-message-history"
+	adminsTable      = "checker-admins"
+	subscribersTable = "checker-subscribers"
 )
 
 func initSSM() {
@@ -217,12 +216,6 @@ func createAdminsTable() {
 	}
 }
 
-func createMessageHistory() {
-	defer wg.Done()
-	// TODO
-	panic("not implemented")
-}
-
 func contains(tables []string, table string) bool {
 	for _, t := range tables {
 		if t == table {
@@ -247,11 +240,6 @@ func setupDb() {
 	if !contains(tables, adminsTable) {
 		wg.Add(1)
 		go createAdminsTable()
-	}
-
-	if !contains(tables, messageHistoryTable) {
-		wg.Add(1)
-		go createMessageHistory()
 	}
 }
 
