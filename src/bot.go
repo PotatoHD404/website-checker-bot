@@ -275,8 +275,20 @@ func returnOk(w http.ResponseWriter) {
 func main() {
 	handler := func(ctx context.Context, req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
 		// log path
-		fmt.Println(req.Path)
-		return adapter.ProxyWithContext(ctx, req)
+
+		//return adapter.ProxyWithContext(ctx, req)
+		// echo request
+		// get json from req
+		data, err := json.Marshal(req)
+		if err != nil {
+			panic("can't marshal request")
+		}
+
+		return events.APIGatewayProxyResponse{
+			Body:       string(data),
+			StatusCode: 200,
+		}, nil
+
 	}
 	lambda.Start(handler)
 }
