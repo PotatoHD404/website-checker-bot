@@ -96,6 +96,10 @@ func initRouter() {
 	r := httprouter.New()
 	r.GET("/init-bot", initBot)
 	r.POST("/bot", handleMessage)
+	r.NotFound = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		log.Println("Not found", r.RequestURI)
+		http.Error(w, fmt.Sprintf("Not found: %s", r.RequestURI), http.StatusNotFound)
+	})
 	adapter = httpadapter.New(r)
 }
 
@@ -273,7 +277,7 @@ func returnOk(w http.ResponseWriter) {
 }
 
 func main() {
-	handler := func(ctx context.Context, req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
+	handler := func(ctx context.Context, req events.APIGatewayV2HTTPRequest) (events.APIGatewayV2HTTPResponse, error) {
 		// log path
 
 		//return adapter.ProxyWithContext(ctx, req)
@@ -284,7 +288,7 @@ func main() {
 			panic("can't marshal request")
 		}
 
-		return events.APIGatewayProxyResponse{
+		return events.APIGatewayV2HTTPResponse{
 			Body:       string(data),
 			StatusCode: 200,
 		}, nil
