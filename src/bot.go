@@ -89,7 +89,7 @@ func initDynamodb() {
 	dbClient = dynamodb.NewFromConfig(cfg)
 }
 
-var adapter *httpadapter.HandlerAdapter
+var adapter *httpadapter.HandlerAdapterV2
 
 func initRouter() {
 	defer wg.Done()
@@ -100,7 +100,7 @@ func initRouter() {
 		log.Println("Not found", r.RequestURI)
 		http.Error(w, fmt.Sprintf("Not found: %s", r.RequestURI), http.StatusNotFound)
 	})
-	adapter = httpadapter.New(r)
+	adapter = httpadapter.NewV2(r)
 }
 
 var wg sync.WaitGroup
@@ -279,19 +279,18 @@ func returnOk(w http.ResponseWriter) {
 func main() {
 	handler := func(ctx context.Context, req events.APIGatewayV2HTTPRequest) (events.APIGatewayV2HTTPResponse, error) {
 		// log path
-
-		//return adapter.ProxyWithContext(ctx, req)
-		// echo request
-		// get json from req
-		data, err := json.Marshal(req)
-		if err != nil {
-			panic("can't marshal request")
-		}
-
-		return events.APIGatewayV2HTTPResponse{
-			Body:       string(data),
-			StatusCode: 200,
-		}, nil
+		return adapter.ProxyWithContext(ctx, req)
+		//// echo request
+		//// get json from req
+		//data, err := json.Marshal(req)
+		//if err != nil {
+		//	panic("can't marshal request")
+		//}
+		//
+		//return events.APIGatewayV2HTTPResponse{
+		//	Body:       string(data),
+		//	StatusCode: 200,
+		//}, nil
 
 	}
 	lambda.Start(handler)
