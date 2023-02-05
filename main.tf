@@ -38,7 +38,7 @@ resource "aws_ssm_parameter" "bot_token" {
 #    build_number = timestamp()
 #  }
 #  provisioner "local-exec" {
-#    command = "cd ${path.root} && mkdir binaries && mkdir binaries/bot && cd ${path.root}/src && env GOOS=linux GOARCH=amd64 go build -o ${path.root}/binaries/bot/main ."
+#    command = "cd ${path.root} && mkdir binaries && mkdir binaries/bot && cd ${path.root}/src && environment GOOS=linux GOARCH=amd64 go build -o ${path.root}/binaries/bot/main ."
 #  }
 #}
 

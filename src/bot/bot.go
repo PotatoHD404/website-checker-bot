@@ -1,4 +1,4 @@
-package telebot
+package bot
 
 import (
 	"fmt"
@@ -6,10 +6,7 @@ import (
 	"os"
 )
 
-var tgBot *telebot.Bot
-
-func initTelebot() {
-	defer main.Wg.Done()
+func New() *telebot.Bot {
 	settings := telebot.Settings{
 		Token:       os.Getenv("BOT_TOKEN"),
 		Synchronous: true,
@@ -20,7 +17,7 @@ func initTelebot() {
 		fmt.Println(err)
 		panic("can't create bot")
 	}
-	tgBot = newTgBot
+	tgBot := newTgBot
 	tgBot.Handle(telebot.OnText, func(m *telebot.Message) {
 		message := m.Text
 		_, err := tgBot.Send(m.Sender, message)
@@ -29,4 +26,5 @@ func initTelebot() {
 			panic("can't send message")
 		}
 	})
+	return tgBot
 }

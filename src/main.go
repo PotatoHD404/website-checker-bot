@@ -2,28 +2,16 @@ package main
 
 import (
 	"github.com/aws/aws-lambda-go/lambda"
-	"sync"
-	"website-checker-bot/src/adapter"
-	"website-checker-bot/src/dynamodb"
-	"website-checker-bot/src/ssm"
-	"website-checker-bot/src/telebot"
+	"github.com/awslabs/aws-lambda-go-api-proxy/httpadapter"
+	"website-checker-bot/router"
 )
 
-var Wg sync.WaitGroup
+var adapter *httpadapter.HandlerAdapterV2
 
 func init() {
-	ssm.initSSM()
-
-	Wg = sync.WaitGroup{}
-	Wg.Add(3)
-
-	go telebot.initTelebot()
-	go dynamodb.initDynamodb()
-	go adapter.initRouter()
-
-	Wg.Wait()
+	adapter = router.GetAdapter()
 }
 
 func main() {
-	lambda.Start(adapter.adapter.ProxyWithContext)
+	lambda.Start(adapter.ProxyWithContext)
 }

@@ -9,7 +9,7 @@ import (
 	"os"
 )
 
-func initSSM() {
+func Init() {
 	// create ssm options
 	cfg, err := config.LoadDefaultConfig(context.TODO(), func(opts *config.LoadOptions) error {
 		opts.Region = os.Getenv("REGION")
@@ -28,6 +28,6 @@ func initSSM() {
 	err = os.Setenv("BOT_TOKEN", *param.Parameter.Value)
 	if err != nil {
 		fmt.Println(err)
-		panic("can't set env variable")
+		panic("can't set environment variable")
 	}
 }

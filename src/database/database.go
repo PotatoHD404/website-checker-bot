@@ -1,4 +1,4 @@
-package dynamodb
+package database
 
 import (
 	"context"
@@ -9,18 +9,21 @@ import (
 	"log"
 	"os"
 	"time"
-	"website-checker-bot/src"
+	"website-checker-bot/threadpool"
+	. "website-checker-bot/utils"
 )
 
 const (
-	adminsTable      = "checker-admins"
-	subscribersTable = "checker-subscribers"
+	AdminsTable   = "checker-admins"
+	WebsitesTable = "checker-subscribers"
 )
 
-var dbClient *dynamodb.Client
+type Db struct {
+	pool   *threadpool.Pool
+	client *dynamodb.Client
+}
 
-func initDynamodb() {
-	defer main.Wg.Done()
+func New(pool *threadpool.Pool) *Db {
 	cfg, err := config.LoadDefaultConfig(context.TODO(), func(opts *config.LoadOptions) error {
 		opts.Region = os.Getenv("REGION")
 		return nil
@@ -29,24 +32,27 @@ func initDynamodb() {
 		panic(err)
 	}
 
-	dbClient = dynamodb.NewFromConfig(cfg)
+	return &Db{pool, dynamodb.NewFromConfig(cfg)}
 }
 
-type myRepo struct {
-	PK            string `dynamodbav:"PK"`
-	SK            string `dynamodbav:"SK"`
-	GSI           string `dynamodbav:"GSI"`
-	LSI           string `dynamodbav:"LSI"`
-	Name          string `dynamodbav:"name"`
-	Description   string `dynamodbav:"description"`
-	AnyStingField string `dynamodbav:"anyStringField"`
-	AnyIntField   int    `dynamodbav:"anyIntField"`
-	AnyByteField  []byte `dynamodbav:"anyByteField"`
+func (db *Db) Init() {
+	tables, err := db.ListTables()
+	if err != nil {
+		panic("can't list tables")
+	}
+
+	if !Contains(tables, WebsitesTable) {
+		db.pool.AddTask(db.CreateWebsitesTable)
+	}
+
+	if !Contains(tables, AdminsTable) {
+		db.pool.AddTask(db.CreateAdminsTable)
+	}
 }
 
-func listTables() ([]string, error) {
+func (db *Db) ListTables() ([]string, error) {
 	var tableNames []string
-	tables, err := dbClient.ListTables(
+	tables, err := db.client.ListTables(
 		context.TODO(), &dynamodb.ListTablesInput{})
 	if err != nil {
 		log.Printf("Couldn't list tables. Here's why: %v\n", err)
@@ -56,38 +62,42 @@ func listTables() ([]string, error) {
 	return tableNames, err
 }
 
-func createSubscribersTable() {
-	defer main.Wg.Done()
-	_, err := dbClient.CreateTable(context.TODO(), &dynamodb.CreateTableInput{
+func (db *Db) CreateWebsitesTable() {
+	_, err := db.client.CreateTable(context.TODO(), &dynamodb.CreateTableInput{
 		AttributeDefinitions: []types.AttributeDefinition{{
 			AttributeName: aws.String("name"),
 			AttributeType: types.ScalarAttributeTypeS,
 		}, {
 			AttributeName: aws.String("url"),
 			AttributeType: types.ScalarAttributeTypeS,
-		}},
+		},
+		//{
+		//	AttributeName: aws.String("chatIds"),
+		//	// array of strings
+		//	AttributeType: types.ScalarAttributeTypeSS,
+		//}
+		},
 		KeySchema: []types.KeySchemaElement{{
 			AttributeName: aws.String("name"),
 			KeyType:       types.KeyTypeHash,
 		}},
-		TableName:   aws.String(subscribersTable),
+		TableName:   aws.String(WebsitesTable),
 		BillingMode: types.BillingModePayPerRequest,
 	})
 	if err != nil {
-		log.Printf("Couldn't create table %v. Here's why: %v\n", subscribersTable, err)
+		log.Printf("Couldn't create table %v. Here's why: %v\n", WebsitesTable, err)
 	} else {
-		waiter := dynamodb.NewTableExistsWaiter(dbClient)
+		waiter := dynamodb.NewTableExistsWaiter(db.client)
 		err = waiter.Wait(context.TODO(), &dynamodb.DescribeTableInput{
-			TableName: aws.String(subscribersTable)}, 15*time.Second)
+			TableName: aws.String(WebsitesTable)}, 15*time.Second)
 		if err != nil {
 			log.Printf("Wait for table exists failed. Here's why: %v\n", err)
 		}
 	}
 }
 
-func createAdminsTable() {
-	defer main.Wg.Done()
-	_, err := dbClient.CreateTable(context.TODO(), &dynamodb.CreateTableInput{
+func (db *Db) CreateAdminsTable() {
+	_, err := db.client.CreateTable(context.TODO(), &dynamodb.CreateTableInput{
 		AttributeDefinitions: []types.AttributeDefinition{{
 			AttributeName: aws.String("chatId"),
 			AttributeType: types.ScalarAttributeTypeS,
@@ -96,15 +106,15 @@ func createAdminsTable() {
 			AttributeName: aws.String("chatId"),
 			KeyType:       types.KeyTypeHash,
 		}},
-		TableName:   aws.String(adminsTable),
+		TableName:   aws.String(AdminsTable),
 		BillingMode: types.BillingModePayPerRequest,
 	})
 	if err != nil {
-		log.Printf("Couldn't create table %v. Here's why: %v\n", adminsTable, err)
+		log.Printf("Couldn't create table %v. Here's why: %v\n", AdminsTable, err)
 	} else {
-		waiter := dynamodb.NewTableExistsWaiter(dbClient)
+		waiter := dynamodb.NewTableExistsWaiter(db.client)
 		err = waiter.Wait(context.TODO(), &dynamodb.DescribeTableInput{
-			TableName: aws.String(adminsTable)}, 15*time.Second)
+			TableName: aws.String(AdminsTable)}, 15*time.Second)
 		if err != nil {
 			log.Printf("Wait for table exists failed. Here's why: %v\n", err)
 		}
