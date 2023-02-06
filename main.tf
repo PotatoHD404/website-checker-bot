@@ -23,7 +23,7 @@ resource "random_password" "id" {
 }
 
 resource "random_password" "random_path" {
-  length = 16
+  length  = 16
   special = false
   numeric = true
   upper   = false
@@ -66,6 +66,8 @@ resource "aws_lambda_function" "bot_lambda" {
     variables = {
       TOKEN_PARAMETER = aws_ssm_parameter.bot_token.name
       REGION          = local.region
+      domain          = "https://${aws_apigatewayv2_stage.api.invoke_url}"
+      path_key        = random_password.random_path.result
     }
   }
 
@@ -161,7 +163,10 @@ resource "aws_lambda_permission" "api" {
 
 resource "null_resource" "init_bot" {
   depends_on = [aws_lambda_permission.api]
-    provisioner "local-exec" {
-        command = "curl ${aws_apigatewayv2_stage.api.invoke_url}${random_password.random_path.result}/init-bot"
-    }
+  triggers   = {
+    build_number = timestamp()
+  }
+  provisioner "local-exec" {
+    command = "curl ${aws_apigatewayv2_stage.api.invoke_url}${random_password.random_path.result}/init-bot"
+  }
 }
