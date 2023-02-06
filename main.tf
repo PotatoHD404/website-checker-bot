@@ -66,7 +66,7 @@ resource "aws_lambda_function" "bot_lambda" {
     variables = {
       TOKEN_PARAMETER = aws_ssm_parameter.bot_token.name
       REGION          = local.region
-      domain          = "https://${aws_apigatewayv2_stage.api.invoke_url}"
+      domain          = sensitive(aws_apigatewayv2_stage.api.invoke_url)
       path_key        = random_password.random_path.result
     }
   }

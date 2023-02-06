@@ -8,9 +8,9 @@ import (
 
 func (env *Env) InitBot(c *gin.Context) {
 	// Set webhook
-
+	url := os.Getenv("domain") + os.Getenv("path_key") + "/bot"
 	env.pool.AddTask(func() {
-		env.bot.SetWebhook(os.Getenv("domain") + "/" + os.Getenv("path_key") + "/bot")
+		env.bot.SetWebhook(url)
 	})
 	env.pool.AddTask(env.db.Init)
 
