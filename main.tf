@@ -168,8 +168,15 @@ resource "aws_lambda_permission" "api" {
 }
 
 resource "null_resource" "init_bot" {
-  depends_on = [aws_lambda_permission.api]
-  triggers   = {
+  depends_on = [
+    aws_lambda_permission.api,
+    aws_apigatewayv2_stage.api,
+    aws_lambda_function.bot_lambda,
+    aws_iam_policy.readpolicy,
+    aws_iam_policy.writepolicy,
+    aws_cloudwatch_log_group.bot_log_group,
+  ]
+  triggers = {
     build_number = timestamp()
   }
   provisioner "local-exec" {
