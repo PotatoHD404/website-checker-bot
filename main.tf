@@ -1,9 +1,20 @@
-locals {
-  region = "eu-central-1"
+variable "app_name" {
+  type    = string
+  default = "checker-bot"
+}
+
+variable "region" {
+  type    = string
+  default = "eu-central-1"
+}
+
+variable "telegram_token" {
+  type      = string
+  sensitive = true
 }
 
 provider "aws" {
-  region = local.region
+  region = var.region
 }
 
 terraform {
@@ -28,11 +39,6 @@ resource "random_password" "random_path" {
   numeric = true
   upper   = false
   lower   = true
-}
-
-variable "telegram_token" {
-  type      = string
-  sensitive = true
 }
 
 resource "aws_ssm_parameter" "bot_token" {
@@ -65,7 +71,7 @@ resource "aws_lambda_function" "bot_lambda" {
   environment {
     variables = {
       TOKEN_PARAMETER = aws_ssm_parameter.bot_token.name
-      REGION          = local.region
+      REGION          = var.region
       domain          = sensitive(aws_apigatewayv2_stage.api.invoke_url)
       path_key        = random_password.random_path.result
     }
@@ -169,4 +175,58 @@ resource "null_resource" "init_bot" {
   provisioner "local-exec" {
     command = "curl ${aws_apigatewayv2_stage.api.invoke_url}${random_password.random_path.result}/init-bot"
   }
+}
+data "aws_caller_identity" "current" {}
+
+data "aws_iam_policy_document" "readpolicy" {
+  statement {
+    actions = [
+      "dynamodb:DescribeTable",
+      "dynamodb:GetItem",
+      "dynamodb:GetRecords",
+      "dynamodb:ListTables",
+      "dynamodb:Query",
+      "dynamodb:Scan",
+    ]
+
+    resources = [
+      "arn:aws:dynamodb:${var.region}:${data.aws_caller_identity.current.account_id}:table/tf-${var.app_name}"
+    ]
+
+    effect = "Allow"
+  }
+}
+
+resource "aws_iam_policy" "readpolicy" {
+  name   = "${var.app_name}-${var.region}-DynamoDb-Read-Policy"
+  policy = data.aws_iam_policy_document.readpolicy.json
+}
+
+// dynamodb table Write Policy
+data "aws_iam_policy_document" "writepolicy" {
+  statement {
+    actions = [
+      "dynamodb:DeleteItem",
+      "dynamodb:DescribeTable",
+      "dynamodb:GetItem",
+      "dynamodb:GetRecords",
+      "dynamodb:ListTables",
+      "dynamodb:PutItem",
+      "dynamodb:Query",
+      "dynamodb:Scan",
+      "dynamodb:UpdateItem",
+      "dynamodb:UpdateTable",
+    ]
+
+    resources = [
+      "arn:aws:dynamodb:${var.region}:${data.aws_caller_identity.current.account_id}:table/tf-${var.app_name}"
+    ]
+
+    effect = "Allow"
+  }
+}
+
+resource "aws_iam_policy" "writepolicy" {
+  name   = "${var.app_name}-${var.region}-DynamoDb-Write-Policy"
+  policy = data.aws_iam_policy_document.writepolicy.json
 }
