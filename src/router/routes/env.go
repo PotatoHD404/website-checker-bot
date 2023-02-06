@@ -1,7 +1,6 @@
 package routes
 
 import (
-	"gopkg.in/tucnak/telebot.v2"
 	"website-checker-bot/bot"
 	"website-checker-bot/database"
 	"website-checker-bot/ssm"
@@ -10,7 +9,7 @@ import (
 
 type Env struct {
 	pool *threadpool.Pool
-	bot  *telebot.Bot
+	bot  *bot.Bot
 	db   *database.Db
 }
 

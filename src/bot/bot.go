@@ -6,7 +6,11 @@ import (
 	"os"
 )
 
-func New() *telebot.Bot {
+type Bot struct {
+	bot *telebot.Bot
+}
+
+func New() *Bot {
 	settings := telebot.Settings{
 		Token:       os.Getenv("BOT_TOKEN"),
 		Synchronous: true,
@@ -26,5 +30,21 @@ func New() *telebot.Bot {
 			panic("can't send message")
 		}
 	})
-	return tgBot
+	return &Bot{tgBot}
+}
+
+func (b *Bot) SetWebhook(url string) {
+	err := b.bot.SetWebhook(&telebot.Webhook{
+		Endpoint: &telebot.WebhookEndpoint{
+			PublicURL: url,
+		},
+	})
+	if err != nil {
+		fmt.Println(err)
+		panic("can't set webhook")
+	}
+}
+
+func (b *Bot) ProcessUpdate(u telebot.Update) {
+	b.bot.ProcessUpdate(u)
 }
