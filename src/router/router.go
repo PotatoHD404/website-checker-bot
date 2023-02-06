@@ -11,6 +11,7 @@ func GetAdapter() *httpadapter.HandlerAdapterV2 {
 	env := routes.GetEnv()
 	r.GET("/init-bot", env.InitBot)
 	r.POST("/bot", env.HandleMessage)
+	r.GET("/test", env.Test)
 	//r. = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 	//	log.Println("Not found", r.RequestURI)
 	//	http.Error(w, fmt.Sprintf("Not found: %s", r.RequestURI), http.StatusNotFound)
