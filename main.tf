@@ -14,12 +14,20 @@ terraform {
   }
 }
 
-resource "random_id" "id" {
-  byte_length = 8
+resource "random_password" "id" {
+  length  = 8
+  special = false
+  numeric = true
+  upper   = false
+  lower   = true
 }
 
-resource "random_id" "random_path" {
-  byte_length = 16
+resource "random_password" "random_path" {
+  length = 16
+  special = false
+  numeric = true
+  upper   = false
+  lower   = true
 }
 
 variable "telegram_token" {
@@ -43,14 +51,14 @@ resource "aws_ssm_parameter" "bot_token" {
 #}
 
 data "archive_file" "bot_lambda_zip" {
-#  depends_on  = [null_resource.bot_build]
+  #  depends_on  = [null_resource.bot_build]
   type        = "zip"
-  output_path = "/tmp/bot-${random_id.id.hex}.zip"
+  output_path = "/tmp/bot-${random_password.id.result}.zip"
   source_dir  = "${path.root}/binaries/bot"
 }
 
 resource "aws_lambda_function" "bot_lambda" {
-  function_name = "bot-${random_id.id.hex}-function"
+  function_name = "bot-${random_password.id.result}-function"
 
   filename         = data.archive_file.bot_lambda_zip.output_path
   source_code_hash = data.archive_file.bot_lambda_zip.output_base64sha256
@@ -65,40 +73,6 @@ resource "aws_lambda_function" "bot_lambda" {
   handler = "main"
   runtime = "go1.x"
   role    = aws_iam_role.lambda_exec.arn
-}
-
-resource "aws_lambda_invocation" "set_webhook" {
-  function_name = aws_lambda_function.bot_lambda.function_name
-
-  input = <<JSON
-{
-    "version": "2.0",
-    "routeKey": "$default",
-    "rawPath": "/init-bot",
-    "rawQueryString": "",
-    "headers": {
-    },
-    "requestContext": {
-        "accountId": "anonymous",
-        "apiId": "zkpmstc7celktxmj24j4frgeeq0tnsbi",
-        "domainName": "zkpmstc7celktxmj24j4frgeeq0tnsbi.lambda-url.eu-central-1.on.aws",
-        "domainPrefix": "zkpmstc7celktxmj24j4frgeeq0tnsbi",
-        "http": {
-            "method": "GET",
-            "path": "/init-bot",
-            "protocol": "HTTP/1.1",
-            "sourceIp": "213.108.105.86",
-            "userAgent": "PostmanRuntime/7.30.0"
-        },
-        "requestId": "c83417f3-9c82-4780-b9f4-fb5697cae66c",
-        "routeKey": "$default",
-        "stage": "$default",
-        "time": "31/Jan/2023:17:29:35 +0000",
-        "timeEpoch": 1675186175633
-    },
-    "isBase64Encoded": false
-}
-JSON
 }
 
 data "aws_iam_policy_document" "lambda_exec_role_policy" {
@@ -151,11 +125,11 @@ EOF
 # api gw
 
 resource "aws_apigatewayv2_api" "api" {
-  name          = "api-${random_id.id.hex}"
+  name          = "api-${random_password.id.result}"
   protocol_type = "HTTP"
 }
 
-resource "aws_apigatewayv2_integration" "bot_api" {
+resource "aws_apigatewayv2_integration" "api" {
   api_id           = aws_apigatewayv2_api.api.id
   integration_type = "AWS_PROXY"
 
@@ -164,11 +138,11 @@ resource "aws_apigatewayv2_integration" "bot_api" {
   payload_format_version = "2.0"
 }
 
-resource "aws_apigatewayv2_route" "bot_api" {
+resource "aws_apigatewayv2_route" "api" {
   api_id    = aws_apigatewayv2_api.api.id
-  route_key = "ANY /${random_id.random_path.hex}/{proxy+}"
+  route_key = "ANY /${random_password.random_path.result}/{proxy+}"
 
-  target = "integrations/${aws_apigatewayv2_integration.bot_api.id}"
+  target = "integrations/${aws_apigatewayv2_integration.api.id}"
 }
 
 resource "aws_apigatewayv2_stage" "api" {
@@ -177,10 +151,17 @@ resource "aws_apigatewayv2_stage" "api" {
   auto_deploy = true
 }
 
-resource "aws_lambda_permission" "bot_apigw" {
+resource "aws_lambda_permission" "api" {
   action        = "lambda:InvokeFunction"
   function_name = aws_lambda_function.bot_lambda.arn
   principal     = "apigateway.amazonaws.com"
 
   source_arn = "${aws_apigatewayv2_api.api.execution_arn}/*/*"
+}
+
+resource "null_resource" "init_bot" {
+  depends_on = [aws_lambda_permission.api]
+    provisioner "local-exec" {
+        command = "curl ${aws_apigatewayv2_stage.api.invoke_url}${random_password.random_path.result}/init-bot"
+    }
 }
