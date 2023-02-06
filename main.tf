@@ -185,6 +185,14 @@ resource "null_resource" "init_bot" {
 }
 data "aws_caller_identity" "current" {}
 
+locals {
+  table_names   = ["checker-admins", "checker-subscribers"]
+  resource_arns = [
+    for table_name in local.table_names :
+    "arn:aws:dynamodb:${var.region}:${data.aws_caller_identity.current.account_id}:table/${table_name}"
+  ]
+}
+
 data "aws_iam_policy_document" "readpolicy" {
   statement {
     actions = [
@@ -196,9 +204,7 @@ data "aws_iam_policy_document" "readpolicy" {
       "dynamodb:Scan",
     ]
 
-    resources = [
-      "arn:aws:dynamodb:${var.region}:${data.aws_caller_identity.current.account_id}:table/tf-${var.app_name}"
-    ]
+    resources = local.resource_arns
 
     effect = "Allow"
   }
@@ -225,9 +231,7 @@ data "aws_iam_policy_document" "writepolicy" {
       "dynamodb:UpdateTable",
     ]
 
-    resources = [
-      "arn:aws:dynamodb:${var.region}:${data.aws_caller_identity.current.account_id}:table/tf-${var.app_name}"
-    ]
+    resources = local.resource_arns
 
     effect = "Allow"
   }
