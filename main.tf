@@ -105,18 +105,6 @@ data "aws_iam_policy_document" "lambda_exec_role_policy" {
 
   statement {
     actions = [
-      "dynamodb:ListTables"
-    ]
-
-    resources = [
-      "arn:aws:dynamodb:${var.region}:${data.aws_caller_identity.current.account_id}:table/*"
-    ]
-
-    effect = "Allow"
-  }
-
-  statement {
-    actions = [
       "dynamodb:DeleteItem",
       "dynamodb:DescribeTable",
       "dynamodb:GetItem",
@@ -126,12 +114,36 @@ data "aws_iam_policy_document" "lambda_exec_role_policy" {
       "dynamodb:Scan",
       "dynamodb:UpdateItem",
       "dynamodb:UpdateTable",
-      "dynamodb:CreateTable",
     ]
 
-    resources = local.resource_arns
+    resources = [
+      aws_dynamodb_table.admins.arn,
+      aws_dynamodb_table.websites.arn
+    ]
 
     effect = "Allow"
+  }
+}
+
+resource "aws_dynamodb_table" "admins" {
+  name         = "checker-admins"
+  billing_mode = "PAY_PER_REQUEST"
+  hash_key     = "chat_id"
+
+  attribute {
+    name = "chat_id"
+    type = "S"
+  }
+}
+
+resource "aws_dynamodb_table" "websites" {
+  name         = "checker-websites"
+  billing_mode = "PAY_PER_REQUEST"
+  hash_key     = "name"
+
+  attribute {
+    name = "name"
+    type = "S"
   }
 }
 
@@ -216,12 +228,4 @@ resource "null_resource" "init_bot" {
 }
 data "aws_caller_identity" "current" {
 
-}
-
-locals {
-  table_names   = ["checker-admins", "checker-subscribers"]
-  resource_arns = [
-    for table_name in local.table_names :
-    "arn:aws:dynamodb:${var.region}:${data.aws_caller_identity.current.account_id}:table/${table_name}"
-  ]
 }
