@@ -93,6 +93,7 @@ data "aws_iam_policy_document" "lambda_exec_role_policy" {
       "arn:aws:logs:*:*:*"
     ]
   }
+
   statement {
     actions = [
       "ssm:GetParameter",
@@ -100,6 +101,37 @@ data "aws_iam_policy_document" "lambda_exec_role_policy" {
     resources = [
       aws_ssm_parameter.bot_token.arn
     ]
+  }
+
+  statement {
+    actions = [
+      "dynamodb:ListTables"
+    ]
+
+    resources = [
+      "arn:aws:dynamodb:${var.region}:${data.aws_caller_identity.current.account_id}:table/*"
+    ]
+
+    effect = "Allow"
+  }
+
+  statement {
+    actions = [
+      "dynamodb:DeleteItem",
+      "dynamodb:DescribeTable",
+      "dynamodb:GetItem",
+      "dynamodb:GetRecords",
+      "dynamodb:PutItem",
+      "dynamodb:Query",
+      "dynamodb:Scan",
+      "dynamodb:UpdateItem",
+      "dynamodb:UpdateTable",
+      "dynamodb:CreateTable",
+    ]
+
+    resources = local.resource_arns
+
+    effect = "Allow"
   }
 }
 
@@ -111,55 +143,6 @@ resource "aws_cloudwatch_log_group" "bot_log_group" {
 resource "aws_iam_role_policy" "lambda_exec_role" {
   role   = aws_iam_role.lambda_exec.id
   policy = data.aws_iam_policy_document.lambda_exec_role_policy.json
-}
-
-resource "aws_iam_role_policy" "lambda_dynamodb_role_read" {
-  role   = aws_iam_role.lambda_exec.id
-  policy = data.aws_iam_policy_document.readpolicy.json
-}
-
-resource "aws_iam_role_policy" "lambda_dynamodb_role_write" {
-  role   = aws_iam_role.lambda_exec.id
-  policy = data.aws_iam_policy_document.writepolicy.json
-}
-
-data "aws_iam_policy_document" "readpolicy" {
-  statement {
-    actions = [
-      "dynamodb:DescribeTable",
-      "dynamodb:GetItem",
-      "dynamodb:GetRecords",
-      "dynamodb:ListTables",
-      "dynamodb:Query",
-      "dynamodb:Scan",
-    ]
-
-    resources = local.resource_arns
-
-    effect = "Allow"
-  }
-}
-
-// dynamodb table Write Policy
-data "aws_iam_policy_document" "writepolicy" {
-  statement {
-    actions = [
-      "dynamodb:DeleteItem",
-      "dynamodb:DescribeTable",
-      "dynamodb:GetItem",
-      "dynamodb:GetRecords",
-      "dynamodb:ListTables",
-      "dynamodb:PutItem",
-      "dynamodb:Query",
-      "dynamodb:Scan",
-      "dynamodb:UpdateItem",
-      "dynamodb:UpdateTable",
-    ]
-
-    resources = local.resource_arns
-
-    effect = "Allow"
-  }
 }
 
 resource "aws_iam_role" "lambda_exec" {
@@ -222,8 +205,6 @@ resource "null_resource" "init_bot" {
     aws_apigatewayv2_stage.api,
     aws_lambda_function.bot_lambda,
     aws_iam_role_policy.lambda_exec_role,
-    aws_iam_role_policy.lambda_dynamodb_role_read,
-    aws_iam_role_policy.lambda_dynamodb_role_write,
     aws_cloudwatch_log_group.bot_log_group,
   ]
   triggers = {
