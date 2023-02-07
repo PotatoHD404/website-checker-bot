@@ -47,17 +47,7 @@ resource "aws_ssm_parameter" "bot_token" {
   value = var.telegram_token
 }
 
-#resource "null_resource" "bot_build" {
-#  triggers = {
-#    build_number = timestamp()
-#  }
-#  provisioner "local-exec" {
-#    command = "cd ${path.root} && mkdir binaries && mkdir binaries/bot && cd ${path.root}/src && environment GOOS=linux GOARCH=amd64 go build -o ${path.root}/binaries/bot/main ."
-#  }
-#}
-
 data "archive_file" "bot_lambda_zip" {
-  #  depends_on  = [null_resource.bot_build]
   type        = "zip"
   output_path = "/tmp/bot-${random_password.id.result}.zip"
   source_dir  = "${path.root}/binaries/bot"
@@ -81,6 +71,26 @@ resource "aws_lambda_function" "bot_lambda" {
   handler = "main"
   runtime = "go1.x"
   role    = aws_iam_role.lambda_exec.arn
+}
+
+resource "aws_cloudwatch_event_rule" "every_five_minutes" {
+  name = "every-five-minutes"
+  description = "Fires every five minutes"
+  schedule_expression = "rate(5 minutes)"
+}
+
+resource "aws_cloudwatch_event_target" "check_website_every_five_minutes" {
+  rule = aws_cloudwatch_event_rule.every_five_minutes.name
+  target_id = "check_website_every_five_minutes"
+  arn = aws_lambda_function.bot_lambda.arn
+}
+
+resource "aws_lambda_permission" "allow_cloudwatch_to_call_checker" {
+  statement_id = "AllowExecutionFromCloudWatch"
+  action = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.bot_lambda.function_name
+  principal = "events.amazonaws.com"
+  source_arn = aws_cloudwatch_event_rule.every_five_minutes.arn
 }
 
 data "aws_iam_policy_document" "lambda_exec_role_policy" {
@@ -174,8 +184,6 @@ resource "aws_iam_role" "lambda_exec" {
 EOF
 }
 
-# api gw
-
 resource "aws_apigatewayv2_api" "api" {
   name          = "api-${random_password.id.result}"
   protocol_type = "HTTP"
@@ -226,6 +234,4 @@ resource "null_resource" "init_bot" {
     command = "curl ${aws_apigatewayv2_stage.api.invoke_url}${random_password.random_path.result}/init-bot"
   }
 }
-data "aws_caller_identity" "current" {
 
-}

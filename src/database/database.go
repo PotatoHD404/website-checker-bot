@@ -10,7 +10,7 @@ import (
 	"log"
 	"os"
 	"strconv"
-	. "website-checker-bot/models"
+	. "website-checker-bot/database/models"
 	"website-checker-bot/threadpool"
 )
 
@@ -123,7 +123,7 @@ func (db *Db) AddAdminMessage(chatId int64, part string, message string) {
 }
 
 func (db *Db) AddWebsite(name string, url string) {
-	data, err := attributevalue.MarshalMap(Website{Name: name, Url: url, ChatIds: make([]int64, 0)})
+	data, err := attributevalue.MarshalMap(Website{Name: name, Url: url, Subscribers: make([]int64, 0)})
 	if err != nil {
 		log.Printf("Couldn't marshal website. Here's why: %v\n", err)
 	}
@@ -136,10 +136,10 @@ func (db *Db) AddWebsite(name string, url string) {
 	}
 }
 
-func (db *Db) GetWebsites(withMessages bool) []Website {
+func (db *Db) GetWebsites(withSubscribers bool) []Website {
 	var websites []Website
 	attr := []string{"name", "url"}
-	if withMessages {
+	if withSubscribers {
 		attr = append(attr, "chat_ids")
 	}
 	output, err := db.client.Scan(context.TODO(), &dynamodb.ScanInput{
@@ -154,8 +154,8 @@ func (db *Db) GetWebsites(withMessages bool) []Website {
 			log.Printf("Couldn't unmarshal websites. Here's why: %v\n", err)
 		}
 		for i := range websites {
-			if websites[i].ChatIds == nil {
-				websites[i].ChatIds = make([]int64, 0)
+			if websites[i].Subscribers == nil {
+				websites[i].Subscribers = make([]int64, 0)
 			}
 		}
 	}
@@ -177,8 +177,8 @@ func (db *Db) GetWebsite(name string) Website {
 		if err != nil {
 			log.Printf("Couldn't unmarshal website. Here's why: %v\n", err)
 		}
-		if website.ChatIds == nil {
-			website.ChatIds = make([]int64, 0)
+		if website.Subscribers == nil {
+			website.Subscribers = make([]int64, 0)
 		}
 	}
 	return website
@@ -212,6 +212,6 @@ func (db *Db) DeleteWebsite(name string) {
 
 func (db *Db) SubscribeToWebsite(chatId int64, websiteName string) {
 	website := db.GetWebsite(websiteName)
-	website.ChatIds = append(website.ChatIds, chatId)
+	website.Subscribers = append(website.Subscribers, chatId)
 	db.UpdateWebsite(website)
 }
