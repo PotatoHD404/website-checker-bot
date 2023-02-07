@@ -1,11 +1,11 @@
-package commands
+package admin
 
 import (
 	"gopkg.in/tucnak/telebot.v2"
 	. "website-checker-bot/router/routes"
 )
 
-func HandleStart(m *telebot.Message, env *Env) {
+func HandleAddAdmin(m *telebot.Message, env *Env) {
 	// Process update
 	//var u telebot.Update
 	//

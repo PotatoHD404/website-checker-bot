@@ -1,11 +1,11 @@
-package commands
+package subscription
 
 import (
 	"gopkg.in/tucnak/telebot.v2"
 	. "website-checker-bot/router/routes"
 )
 
-func HandleStart(m *telebot.Message, env *Env) {
+func HandleSubscribe(m *telebot.Message, env *Env) {
 	// Process update
 	//var u telebot.Update
 	//

@@ -1,11 +1,11 @@
-package commands
+package website
 
 import (
 	"gopkg.in/tucnak/telebot.v2"
 	. "website-checker-bot/router/routes"
 )
 
-func HandleStart(m *telebot.Message, env *Env) {
+func HandleAddWebsite(m *telebot.Message, env *Env) {
 	// Process update
 	//var u telebot.Update
 	//
