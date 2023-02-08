@@ -2,10 +2,10 @@ package routes
 
 import (
 	"website-checker-bot/bot"
+	b "website-checker-bot/bot/commands/env"
 	"website-checker-bot/database"
 	"website-checker-bot/ssm"
 	"website-checker-bot/threadpool"
-	e "website-checker-bot/bot/env"
 )
 
 type Env struct {
@@ -17,10 +17,12 @@ type Env struct {
 func GetEnv() *Env {
 	ssm.Init()
 
-	pool := threadpool.New()
-	tgBot := threadpool.MakeChan(bot.New)
-	db := threadpool.MakeChan(func() *database.Db { return database.New(pool) })
-	env := &Env{pool, <-tgBot, <-db}
-	env.bot.Init(e.Env{env.pool, env.bot, env.db})
+	poolCh := threadpool.New()
+	tgBotCh := threadpool.MakeChan(bot.New)
+	dbCh := threadpool.MakeChan(func() *database.Db { return database.New(poolCh) })
+	pool, tgBot, db := poolCh, <-tgBotCh, <-dbCh
+	env := &Env{pool, tgBot, db}
+	env.bot.Init(&b.Env{Pool: pool, Bot: tgBot.GetBot(), Db: db})
+
 	return env
 }

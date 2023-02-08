@@ -2,13 +2,14 @@ package bot
 
 import (
 	"fmt"
-	"gopkg.in/tucnak/telebot.v2"
 	"os"
 	. "website-checker-bot/bot/commands"
 	. "website-checker-bot/bot/commands/admin"
+	. "website-checker-bot/bot/commands/env"
 	. "website-checker-bot/bot/commands/subscription"
 	. "website-checker-bot/bot/commands/website"
-	. "website-checker-bot/bot/env"
+
+	"gopkg.in/tucnak/telebot.v2"
 )
 
 type Bot struct {
@@ -28,6 +29,10 @@ func New() *Bot {
 	}
 
 	return &Bot{tgBot}
+}
+
+func (b *Bot) GetBot() *telebot.Bot {
+	return b.bot
 }
 
 func (b *Bot) Init(e *Env) {

@@ -1,8 +1,9 @@
 package subscription
 
 import (
+	. "website-checker-bot/bot/commands/env"
+
 	"gopkg.in/tucnak/telebot.v2"
-	. "website-checker-bot/bot/env"
 )
 
 func HandleSubscribe(m *telebot.Message, env *Env) {

@@ -3,9 +3,10 @@ package routes
 import (
 	"encoding/json"
 	"fmt"
+	"net/http"
+
 	"github.com/gin-gonic/gin"
 	"gopkg.in/tucnak/telebot.v2"
-	"net/http"
 )
 
 func (env *Env) HandleMessage(c *gin.Context) {
