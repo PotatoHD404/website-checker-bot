@@ -1,6 +1,7 @@
 package routes
 
 import (
+	"fmt"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -9,7 +10,7 @@ import (
 func (env *Env) CheckWebsites(c *gin.Context) {
 
 	websites := env.db.GetWebsites(false)
-
+	fmt.Println(websites)
 	for _, website := range websites {
 		env.pool.AddTask(func() {
 
