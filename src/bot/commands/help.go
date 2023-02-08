@@ -2,7 +2,7 @@ package commands
 
 import (
 	"gopkg.in/tucnak/telebot.v2"
-	. "website-checker-bot/router/routes"
+	. "website-checker-bot/bot/env"
 )
 
 func HandleHelp(m *telebot.Message, env *Env) {

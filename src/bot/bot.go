@@ -8,7 +8,7 @@ import (
 	. "website-checker-bot/bot/commands/admin"
 	. "website-checker-bot/bot/commands/subscription"
 	. "website-checker-bot/bot/commands/website"
-	. "website-checker-bot/router/routes"
+	. "website-checker-bot/bot/env"
 )
 
 type Bot struct {

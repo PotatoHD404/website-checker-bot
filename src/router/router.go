@@ -10,7 +10,7 @@ import (
 func GetAdapter() *httpadapter.HandlerAdapterV2 {
 	r := gin.Default()
 	env := routes.GetEnv()
-	r.GET("", env.CheckWebsites)
+	r.GET("/", env.CheckWebsites)
 	prefix := r.Group("/" + os.Getenv("path_key"))
 	{
 		prefix.GET("/init-bot", env.InitBot)

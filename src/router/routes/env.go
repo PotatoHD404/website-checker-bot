@@ -5,6 +5,7 @@ import (
 	"website-checker-bot/database"
 	"website-checker-bot/ssm"
 	"website-checker-bot/threadpool"
+	e "website-checker-bot/bot/env"
 )
 
 type Env struct {
@@ -20,6 +21,6 @@ func GetEnv() *Env {
 	tgBot := threadpool.MakeChan(bot.New)
 	db := threadpool.MakeChan(func() *database.Db { return database.New(pool) })
 	env := &Env{pool, <-tgBot, <-db}
-	env.bot.Init(env)
+	env.bot.Init(e.Env{env.pool, env.bot, env.db})
 	return env
 }
