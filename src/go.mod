@@ -11,7 +11,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/ssm v1.35.1
 	github.com/awslabs/aws-lambda-go-api-proxy v0.13.3
 	github.com/gin-gonic/gin v1.8.2
-	gopkg.in/tucnak/telebot.v2 v2.5.0
+	gopkg.in/telebot.v3 v3.1.2
 )
 
 require (

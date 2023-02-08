@@ -2,11 +2,15 @@ package admin
 
 import (
 	. "website-checker-bot/bot/commands/env"
+	. "website-checker-bot/bot/middlewares"
 
-	"gopkg.in/tucnak/telebot.v2"
+	"gopkg.in/telebot.v3"
 )
 
-func HandleGetAdmins(m *telebot.Message, env *Env) {
+func HandleGetAdmins(env *Env, c telebot.Context, args []string) error {
+	if !CheckAdmin(env, c) {
+		return nil
+	}
 	// Process update
 	//var u telebot.Update
 	//
@@ -19,4 +23,5 @@ func HandleGetAdmins(m *telebot.Message, env *Env) {
 	//c.JSON(http.StatusOK, gin.H{
 	//	"message": "ok",
 	//})
+	return nil
 }

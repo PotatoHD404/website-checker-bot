@@ -22,7 +22,7 @@ func GetEnv() *Env {
 	dbCh := threadpool.MakeChan(func() *database.Db { return database.New(poolCh) })
 	pool, tgBot, db := poolCh, <-tgBotCh, <-dbCh
 	env := &Env{pool, tgBot, db}
-	env.bot.Init(&b.Env{Pool: pool, Bot: tgBot.GetBot(), Db: db})
+	env.bot.Init(&b.Env{Pool: pool, Db: db})
 
 	return env
 }

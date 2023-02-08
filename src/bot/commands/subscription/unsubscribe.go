@@ -3,10 +3,10 @@ package subscription
 import (
 	. "website-checker-bot/bot/commands/env"
 
-	"gopkg.in/tucnak/telebot.v2"
+	"gopkg.in/telebot.v3"
 )
 
-func HandleUnsubscribe(m *telebot.Message, env *Env) {
+func HandleUnsubscribe(env *Env, c telebot.Context, args []string) error {
 	// Process update
 	//var u telebot.Update
 	//
@@ -19,4 +19,5 @@ func HandleUnsubscribe(m *telebot.Message, env *Env) {
 	//c.JSON(http.StatusOK, gin.H{
 	//	"message": "ok",
 	//})
+	return nil
 }
