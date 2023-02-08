@@ -189,6 +189,8 @@ resource "aws_apigatewayv2_api" "api" {
   protocol_type = "HTTP"
 }
 
+// TODO: add ddos protection
+
 resource "aws_apigatewayv2_integration" "api" {
   api_id           = aws_apigatewayv2_api.api.id
   integration_type = "AWS_PROXY"

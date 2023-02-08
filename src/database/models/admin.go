@@ -1,8 +1,9 @@
 package models
 
 type Admin struct {
-	ChatId  int64             `dynamodbav:"chat_id"`
-	History map[string]string `dynamodbav:"history"`
+	ChatId   int64             `dynamodbav:"chat_id"`
+	Username string            `dynamodbav:"username"`
+	History  map[string]string `dynamodbav:"history"`
 }
 
 func NewAdmin(chatId int64) Admin {
