@@ -17,10 +17,10 @@ type Env struct {
 func GetEnv() *Env {
 	ssm.Init()
 
-	poolCh := threadpool.New()
+	pool := threadpool.New()
 	tgBotCh := threadpool.MakeChan(bot.New)
-	dbCh := threadpool.MakeChan(func() *database.Db { return database.New(poolCh) })
-	pool, tgBot, db := poolCh, <-tgBotCh, <-dbCh
+	dbCh := threadpool.MakeChan(func() *database.Db { return database.New(pool) })
+	tgBot, db := <-tgBotCh, <-dbCh
 	env := &Env{pool, tgBot, db}
 	env.bot.Init(&b.Env{Pool: pool, Db: db})
 
