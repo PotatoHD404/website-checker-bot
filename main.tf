@@ -189,7 +189,15 @@ resource "aws_apigatewayv2_api" "api" {
   protocol_type = "HTTP"
 }
 
-// TODO: add ddos protection
+resource "aws_apigatewayv2_stage" "example" {
+  api_id = aws_apigatewayv2_api.api.id
+  name   = "stage-${random_password.id.result}"
+
+  default_route_settings {
+    throttling_burst_limit = 75
+    throttling_rate_limit  = 75
+  }
+}
 
 resource "aws_apigatewayv2_integration" "api" {
   api_id           = aws_apigatewayv2_api.api.id
