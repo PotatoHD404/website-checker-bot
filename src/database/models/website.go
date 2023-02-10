@@ -3,9 +3,11 @@ package models
 import (
 	"crypto/sha1"
 	"encoding/base64"
+	"github.com/PuerkitoBio/goquery"
 	"io"
 	"io/ioutil"
 	"net/http"
+	"strings"
 	"time"
 )
 
@@ -13,14 +15,16 @@ type Website struct {
 	Name        string  `dynamodbav:"name"`
 	Url         string  `dynamodbav:"url"`
 	Hash        string  `dynamodbav:"hash"`
+	Xpath       string  `dynamodbav:"xpath"`
 	Subscribers []int64 `dynamodbav:"subscribers"`
 }
 
-func NewWebsite(name string, url string) Website {
+func NewWebsite(name string, url string, xpath string) Website {
 	return Website{
 		Name:        name,
 		Url:         url,
 		Hash:        "",
+		Xpath:       xpath,
 		Subscribers: make([]int64, 0),
 	}
 }
@@ -30,6 +34,13 @@ func (w *Website) CheckChanged() (bool, error) {
 	data, err := getWebsiteData(w.Url)
 	if err != nil {
 		return false, err
+	}
+	// if xpath is not empty, get xpath
+	if w.Xpath != "" {
+		data, err = getXpathData(data, w.Xpath)
+		if err != nil {
+			return false, err
+		}
 	}
 	hash, err := getWebsiteHash(data)
 	if err != nil {
@@ -43,6 +54,14 @@ func (w *Website) CheckChanged() (bool, error) {
 	}
 
 	return false, nil
+}
+
+func getXpathData(data string, xpath string) (string, error) {
+	doc, err := goquery.NewDocumentFromReader(strings.NewReader(data))
+	if err != nil {
+		return "", err
+	}
+	return doc.Find(xpath).Text(), nil
 }
 
 func getWebsiteData(url string) (string, error) {

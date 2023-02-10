@@ -13,8 +13,8 @@ func HandleAddWebsite(env *Env, c telebot.Context, args []string) error {
 		return nil
 	}
 
-	if len(args) != 2 {
-		err := c.Reply("Usage: /add_website <url> <name>")
+	if len(args) < 2 || len(args) > 3 {
+		err := c.Reply("Usage: /add_website <url> <name> [xpath]")
 		if err != nil {
 			return err
 		}
@@ -23,6 +23,12 @@ func HandleAddWebsite(env *Env, c telebot.Context, args []string) error {
 
 	websiteUrl := args[0]
 	websiteName := args[1]
+	var websiteXpath string
+	if len(args) == 3 {
+		websiteXpath = args[2]
+	} else {
+		websiteXpath = ""
+	}
 	if env.Db.CheckWebsite(websiteName) {
 		err := c.Reply("Website with this name already exists")
 		if err != nil {
@@ -55,8 +61,17 @@ func HandleAddWebsite(env *Env, c telebot.Context, args []string) error {
 		}
 		return nil
 	}
+	// regexp for xpath
+	r = regexp.MustCompile(`^$|^(//|/)[a-zA-Z0-9]+(//|/)[a-zA-Z0-9]+$`)
+	if !r.MatchString(websiteXpath) {
+		err := c.Reply("Invalid xpath")
+		if err != nil {
+			return err
+		}
+		return nil
+	}
 
-	env.Db.AddWebsite(websiteName, websiteUrl)
+	env.Db.AddWebsite(websiteName, websiteUrl, websiteXpath)
 	env.Db.AddSubscription(c.Sender().ID, websiteName)
 
 	err := c.Reply("Website added")

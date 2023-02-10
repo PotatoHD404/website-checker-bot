@@ -11,12 +11,15 @@ import (
 func (env *Env) CheckWebsites(c *gin.Context) {
 
 	websites := env.db.GetWebsites(false)
-	for _, website := range websites {
-		env.pool.AddTask(func() {
+	for i := range websites {
+		env.pool.Add(1)
+		go func(j int) {
+			defer env.pool.Done()
+			website := websites[j]
 			changed, err := website.CheckChanged()
 			if err != nil {
 				fmt.Println("Error checking website. Here is why: ", err)
-				panic(err)
+				return
 			}
 			if !changed {
 				return
@@ -30,10 +33,10 @@ func (env *Env) CheckWebsites(c *gin.Context) {
 				_, err := env.bot.Send(&telebot.User{ID: subscriber}, "Website "+newWebsite.Name+" changed!")
 				if err != nil {
 					fmt.Println("Error sending message to subscriber. Here is why: ", err)
-					panic(err)
+					return
 				}
 			}
-		})
+		}(i)
 	}
 	env.pool.Wait()
 	c.JSON(http.StatusOK, gin.H{

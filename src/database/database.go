@@ -2,7 +2,6 @@ package database
 
 import (
 	"context"
-	"fmt"
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/feature/dynamodb/attributevalue"
@@ -132,8 +131,8 @@ func (db *Db) AddAdminMessage(chatId int64, part string, message string) {
 	db.UpdateAdmin(admin)
 }
 
-func (db *Db) AddWebsite(name string, url string) {
-	data, err := attributevalue.MarshalMap(NewWebsite(name, url))
+func (db *Db) AddWebsite(name string, url string, xpath string) {
+	data, err := attributevalue.MarshalMap(NewWebsite(name, url, xpath))
 	if err != nil {
 		log.Printf("Couldn't marshal website. Here's why: %v\n", err)
 	}
@@ -185,8 +184,6 @@ func (db *Db) GetWebsites(withSubscribers bool) []Website {
 		AttributesToGet: attr,
 	})
 
-	fmt.Println(output)
-
 	if err != nil {
 		log.Printf("Couldn't get websites. Here's why: %v\n", err)
 		panic(err)
@@ -202,7 +199,6 @@ func (db *Db) GetWebsites(withSubscribers bool) []Website {
 			}
 		}
 	}
-	fmt.Println(websites)
 	return websites
 }
 

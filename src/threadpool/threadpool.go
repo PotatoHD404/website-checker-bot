@@ -10,6 +10,14 @@ func New() *Pool {
 	return &Pool{sync.WaitGroup{}}
 }
 
+func (p *Pool) Add(n int) {
+	p.wg.Add(n)
+}
+
+func (p *Pool) Done() {
+	p.wg.Done()
+}
+
 func (p *Pool) Wait() {
 	p.wg.Wait()
 }
