@@ -35,7 +35,7 @@ func New() *Bot {
 
 func (b *Bot) Init(e *Env) {
 	b.bot.Handle(telebot.OnText, func(c telebot.Context) error {
-		r, _ := regexp.Compile("^/([a-z_]+)( [a-z0-9_/:.]+)*$")
+		r, _ := regexp.Compile(`^/([a-z_]+)( [a-z0-9_/:.\-]+)*$`)
 		message := c.Text()
 		if !r.MatchString(message) {
 			err := c.Reply("I don't understand you. Use /help to see all available commands.")

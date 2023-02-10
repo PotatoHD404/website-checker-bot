@@ -53,7 +53,7 @@ func HandleAddWebsite(env *Env, c telebot.Context, args []string) error {
 		}
 		return nil
 	}
-	r = regexp.MustCompile(`^[a-zA-Z0-9]+$`)
+	r = regexp.MustCompile(`^[a-zA-Z0-9_-]+$`)
 	if !r.MatchString(websiteName) {
 		err := c.Reply("Invalid name")
 		if err != nil {
