@@ -11,7 +11,6 @@ import (
 func (env *Env) CheckWebsites(c *gin.Context) {
 
 	websites := env.db.GetWebsites(false)
-	fmt.Println(websites)
 	for _, website := range websites {
 		env.pool.AddTask(func() {
 			changed, err := website.CheckChanged()
@@ -22,8 +21,9 @@ func (env *Env) CheckWebsites(c *gin.Context) {
 			if !changed {
 				return
 			}
+			fmt.Println("Website " + website.Name + " changed! Sending message to subscribers...")
 			newWebsite := env.db.GetWebsite(website.Name)
-
+			fmt.Println("Website hash: " + website.Hash)
 			newWebsite.Hash = website.Hash
 			env.db.UpdateWebsite(newWebsite)
 			for _, subscriber := range newWebsite.Subscribers {
