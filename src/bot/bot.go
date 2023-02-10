@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"regexp"
+	"strings"
 	. "website-checker-bot/bot/commands"
 	. "website-checker-bot/bot/commands/admin"
 	. "website-checker-bot/bot/commands/env"
@@ -34,7 +35,7 @@ func New() *Bot {
 
 func (b *Bot) Init(e *Env) {
 	b.bot.Handle(telebot.OnText, func(c telebot.Context) error {
-		r, _ := regexp.Compile("/([a-z_]+)( [a-z0-9_]+)?")
+		r, _ := regexp.Compile("^/([a-z_]+)( [a-z0-9_]+)?$")
 		message := c.Text()
 		if !r.MatchString(message) {
 			err := c.Reply("I don't understand you. Use /help to see all available commands.")
@@ -44,30 +45,31 @@ func (b *Bot) Init(e *Env) {
 			}
 			return nil
 		}
-		command := r.FindStringSubmatch(message)[0]
-		args := r.FindStringSubmatch(message)[1:]
+		submatch := strings.Split(message, " ")
+		command := submatch[0]
+		args := submatch[1:]
 		switch command {
-		case "start":
+		case "/start":
 			return HandleStart(e, c, args)
-		case "help":
+		case "/help":
 			return HandleHelp(e, c, args)
-		case "add_website":
+		case "/add_website":
 			return HandleAddWebsite(e, c, args)
-		case "get_websites":
+		case "/get_websites":
 			return HandleGetWebsites(e, c, args)
-		case "delete_website":
+		case "/delete_website":
 			return HandleDeleteWebsite(e, c, args)
-		case "add_admin":
+		case "/add_admin":
 			return HandleAddAdmin(e, c, args)
-		case "get_admins":
+		case "/get_admins":
 			return HandleGetAdmins(e, c, args)
-		case "delete_admin":
+		case "/delete_admin":
 			return HandleDeleteAdmin(e, c, args)
-		case "subscribe":
+		case "/subscribe":
 			return HandleSubscribe(e, c, args)
-		case "unsubscribe":
+		case "/unsubscribe":
 			return HandleUnsubscribe(e, c, args)
-		case "get_subscriptions":
+		case "/get_subscriptions":
 			return HandleGetSubscriptions(e, c, args)
 
 		default:
