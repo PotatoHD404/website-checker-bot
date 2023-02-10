@@ -13,7 +13,7 @@ func HandleDeleteWebsite(env *Env, c telebot.Context, args []string) error {
 	}
 
 	if len(args) != 1 {
-		c.Reply("Usage: /deletewebsite <name>")
+		c.Reply("Usage: /delete_website <name>")
 		return nil
 	}
 

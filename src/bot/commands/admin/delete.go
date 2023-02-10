@@ -16,7 +16,7 @@ func HandleDeleteAdmin(env *Env, c telebot.Context, args []string) error {
 	}
 
 	if len(args) != 1 {
-		err := c.Reply("Usage: /deleteadmin <userId>")
+		err := c.Reply("Usage: /delete_admin <userId>")
 		if err != nil {
 			return err
 		}

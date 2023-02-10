@@ -14,7 +14,7 @@ func HandleAddWebsite(env *Env, c telebot.Context, args []string) error {
 	}
 
 	if len(args) != 2 {
-		err := c.Reply("Usage: /addwebsite <url> <name>")
+		err := c.Reply("Usage: /add_website <url> <name>")
 		if err != nil {
 			return err
 		}

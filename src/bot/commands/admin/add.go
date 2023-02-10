@@ -37,7 +37,7 @@ func HandleAddAdmin(env *Env, c telebot.Context, args []string) error {
 	}
 
 	if len(args) != 1 {
-		err := c.Reply("Usage: /addadmin <user_id>")
+		err := c.Reply("Usage: /add_admin <user_id>")
 		if err != nil {
 			return err
 		}
