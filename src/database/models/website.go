@@ -36,18 +36,22 @@ func (w *Website) CheckChanged() (bool, error) {
 		return false, err
 	}
 	// if xpath is not empty, get xpath
+	doc, err := goquery.NewDocumentFromReader(strings.NewReader(data))
+	body := doc.Find("*").First()
+	removeJunk(body)
 	if w.Xpath != "" {
-		data, err = getXpathData(data, w.Xpath)
-		if err != nil {
-			return false, err
-		}
+		body = getXpathData(body, w.Xpath)
 	}
+	data = body.Text()
+	// write to file
+	//err = ioutil.WriteFile("test.html", []byte(data), 0644)
 	hash, err := getWebsiteHash(data)
 	if err != nil {
 		return false, err
 	}
 
 	// if hash is different, update hash and return true
+	//println(hash)
 	if hash != w.Hash {
 		w.Hash = hash
 		return true, nil
@@ -57,8 +61,11 @@ func (w *Website) CheckChanged() (bool, error) {
 }
 
 func removeJunk(data *goquery.Selection) {
-	data.RemoveAttr("class")
-	data.RemoveAttr("id")
+	// get attributes
+	//println(data.Attr("class"))
+	data = data.RemoveAttr("class")
+	//println(data.Attr("class"))
+	data = data.RemoveAttr("id")
 	data.Contents().Each(func(i int, s *goquery.Selection) {
 		if s.Is("script") {
 			s.Remove()
@@ -69,19 +76,13 @@ func removeJunk(data *goquery.Selection) {
 		}
 	})
 }
-func getXpathData(data string, xpath string) (string, error) {
-	doc, err := goquery.NewDocumentFromReader(strings.NewReader(data))
-	if err != nil {
-		return "", err
-	}
+func getXpathData(body *goquery.Selection, xpath string) *goquery.Selection {
 	// get only body
-	body := doc.Find("body")
 	// remove classes and ids, keep only text recursively
-	removeJunk(body)
 	// remove /html/body from xpath
 	xpath = strings.ReplaceAll(xpath, "/html/body", "")
 
-	return body.Find(xpath).Text(), nil
+	return body.Find(xpath)
 }
 
 func getWebsiteData(url string) (string, error) {

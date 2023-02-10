@@ -42,12 +42,9 @@ func (w *Website) CheckChanged() (bool, error) {
 	if w.Xpath != "" {
 		body = getXpathData(body, w.Xpath)
 	}
-	data, err = body.Html()
-	if err != nil {
-		return false, err
-	}
+	data = body.Text()
 	// write to file
-	err = ioutil.WriteFile("test.html", []byte(data), 0644)
+	//err = ioutil.WriteFile("test.html", []byte(data), 0644)
 	hash, err := getWebsiteHash(data)
 	if err != nil {
 		return false, err

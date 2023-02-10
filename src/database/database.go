@@ -175,7 +175,7 @@ func (db *Db) CheckWebsiteUrl(url string) bool {
 
 func (db *Db) GetWebsites(withSubscribers bool) []Website {
 	var websites []Website
-	attr := []string{"name", "url"}
+	attr := []string{"name", "url", "xpath", "hash"}
 	if withSubscribers {
 		attr = append(attr, "subscribers")
 	}
