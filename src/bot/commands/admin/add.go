@@ -14,39 +14,57 @@ func HandleAddAdmin(env *Env, c telebot.Context, args []string) error {
 	admins := env.Db.GetAdmins()
 
 	if len(admins) == 0 {
-		env.Db.AddAdmin(c.Sender().ID)
+		env.Db.AddAdmin(c.Sender().ID, c.Sender().Username)
 		err := c.Reply("You are admin now")
 		if err != nil {
 			return err
 		}
 		return nil
-	} else if !utils.Contains(env.Db.GetAdmins(), NewAdmin(c.Sender().ID)) {
-		c.Reply("You are not admin")
+	} else if !utils.Contains(env.Db.GetAdmins(), NewAdmin(c.Sender().ID, c.Sender().Username)) {
+		err := c.Reply("You are not admin")
+		if err != nil {
+			return err
+		}
 		return nil
 	}
 
 	if len(args) == 0 {
-		c.Reply("You are already admin")
+		err := c.Reply("You are already admin")
+		if err != nil {
+			return err
+		}
 		return nil
 	}
 
-	if len(args) > 1 {
-		c.Reply("Too many arguments")
+	if len(args) != 1 {
+		err := c.Reply("Usage: /addadmin <user_id>")
+		if err != nil {
+			return err
+		}
 		return nil
 	}
 
 	userId, err := strconv.ParseInt(args[0], 10, 64)
 
 	if err != nil {
-		c.Reply("Invalid argument")
+		err := c.Reply("Invalid argument")
+		if err != nil {
+			return err
+		}
 		return nil
 	}
 
-	if utils.Contains(admins, NewAdmin(userId)) {
-		c.Reply("User is already admin")
+	username := c.Sender().Username
+
+	if utils.Contains(admins, NewAdmin(userId, username)) {
+		err := c.Reply("User is already admin")
+		if err != nil {
+			return err
+		}
+		return nil
 	}
 
-	env.Db.AddAdmin(userId)
+	env.Db.AddAdmin(userId, username)
 	err = c.Reply("User is admin now")
 	if err != nil {
 		return err

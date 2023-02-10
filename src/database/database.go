@@ -38,8 +38,8 @@ func New(pool *threadpool.Pool) *Db {
 
 func (db *Db) Init() {}
 
-func (db *Db) AddAdmin(chatId int64) {
-	data, err := attributevalue.MarshalMap(Admin{ChatId: chatId, History: make(map[string]string)})
+func (db *Db) AddAdmin(chatId int64, username string) {
+	data, err := attributevalue.MarshalMap(NewAdmin(chatId, username))
 	if err != nil {
 		log.Printf("Couldn't marshal admin. Here's why: %v\n", err)
 	}
@@ -56,6 +56,10 @@ func (db *Db) GetAdmins() []Admin {
 	var admins []Admin
 	output, err := db.client.Scan(context.TODO(), &dynamodb.ScanInput{
 		TableName: aws.String(AdminsTable),
+		AttributesToGet: []string{
+			"chat_id",
+			"username",
+		},
 	})
 	if err != nil {
 		log.Printf("Couldn't get admins. Here's why: %v\n", err)
@@ -63,6 +67,11 @@ func (db *Db) GetAdmins() []Admin {
 		err = attributevalue.UnmarshalListOfMaps(output.Items, &admins)
 		if err != nil {
 			log.Printf("Couldn't unmarshal admins. Here's why: %v\n", err)
+		}
+		for i := range admins {
+			if admins[i].History == nil {
+				admins[i].History = make(map[string]string)
+			}
 		}
 	}
 	return admins
@@ -123,7 +132,7 @@ func (db *Db) AddAdminMessage(chatId int64, part string, message string) {
 }
 
 func (db *Db) AddWebsite(name string, url string) {
-	data, err := attributevalue.MarshalMap(Website{Name: name, Url: url, Subscribers: make([]int64, 0)})
+	data, err := attributevalue.MarshalMap(NewWebsite(name, url))
 	if err != nil {
 		log.Printf("Couldn't marshal website. Here's why: %v\n", err)
 	}
@@ -134,6 +143,34 @@ func (db *Db) AddWebsite(name string, url string) {
 	if err != nil {
 		log.Printf("Couldn't add website. Here's why: %v\n", err)
 	}
+}
+
+func (db *Db) CheckWebsite(name string) bool {
+	output, err := db.client.GetItem(context.TODO(), &dynamodb.GetItemInput{
+		TableName: aws.String(WebsitesTable),
+		Key: map[string]types.AttributeValue{
+			"name": &types.AttributeValueMemberS{Value: name},
+		},
+	})
+	if err != nil {
+		log.Printf("Couldn't check website. Here's why: %v\n", err)
+		return false
+	}
+	return output.Item != nil
+}
+
+func (db *Db) CheckWebsiteUrl(url string) bool {
+	output, err := db.client.GetItem(context.TODO(), &dynamodb.GetItemInput{
+		TableName: aws.String(WebsitesTable),
+		Key: map[string]types.AttributeValue{
+			"url": &types.AttributeValueMemberS{Value: url},
+		},
+	})
+	if err != nil {
+		log.Printf("Couldn't check website. Here's why: %v\n", err)
+		return false
+	}
+	return output.Item != nil
 }
 
 func (db *Db) GetWebsites(withSubscribers bool) []Website {
@@ -210,8 +247,43 @@ func (db *Db) DeleteWebsite(name string) {
 	}
 }
 
-func (db *Db) SubscribeToWebsite(chatId int64, websiteName string) {
+func (db *Db) GetSubscriptions(id int64) []Website {
+	websites := db.GetWebsites(true)
+	var subscriptions []Website
+	for _, website := range websites {
+		for _, subscriber := range website.Subscribers {
+			if subscriber == id {
+				subscriptions = append(subscriptions, website)
+			}
+		}
+	}
+	return subscriptions
+}
+
+func (db *Db) AddSubscription(chatId int64, websiteName string) {
 	website := db.GetWebsite(websiteName)
 	website.Subscribers = append(website.Subscribers, chatId)
 	db.UpdateWebsite(website)
+}
+
+func (db *Db) DeleteSubscription(chatId int64, websiteName string) {
+	website := db.GetWebsite(websiteName)
+	var subscribers []int64
+	for _, subscriber := range website.Subscribers {
+		if subscriber != chatId {
+			subscribers = append(subscribers, subscriber)
+		}
+	}
+	website.Subscribers = subscribers
+	db.UpdateWebsite(website)
+}
+
+func (db *Db) CheckSubscription(chatId int64, websiteName string) bool {
+	website := db.GetWebsite(websiteName)
+	for _, subscriber := range website.Subscribers {
+		if subscriber == chatId {
+			return true
+		}
+	}
+	return false
 }

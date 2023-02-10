@@ -15,8 +15,11 @@ func HandleGetAdmins(env *Env, c telebot.Context, args []string) error {
 	admins := env.Db.GetAdmins()
 	message := "Admins:\n"
 	for _, admin := range admins {
-		message += strconv.FormatInt(admin.ChatId, 10) + "\n"
+		message += admin.Username + " - " + strconv.FormatInt(admin.ChatId, 10) + "\n"
 	}
-
+	err := c.Reply(message)
+	if err != nil {
+		return err
+	}
 	return nil
 }

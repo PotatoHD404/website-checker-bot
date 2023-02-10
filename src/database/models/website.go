@@ -6,6 +6,7 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http"
+	"time"
 )
 
 type Website struct {
@@ -15,32 +16,49 @@ type Website struct {
 	Subscribers []int64 `dynamodbav:"subscribers"`
 }
 
-func (w *Website) CheckChanged() bool {
+func NewWebsite(name string, url string) Website {
+	return Website{
+		Name:        name,
+		Url:         url,
+		Hash:        "",
+		Subscribers: make([]int64, 0),
+	}
+}
+
+func (w *Website) CheckChanged() (bool, error) {
 	// get websites hash
-	data := getWebsiteData(w.Url)
-	hash := getWebsiteHash(data)
+	data, err := getWebsiteData(w.Url)
+	if err != nil {
+		return false, err
+	}
+	hash, err := getWebsiteHash(data)
+	if err != nil {
+		return false, err
+	}
 
 	// if hash is different, update hash and return true
 	if hash != w.Hash {
 		w.Hash = hash
-		return true
+		return true, nil
 	}
 
-	return false
+	return false, nil
 }
 
-func getWebsiteData(url string) string {
+func getWebsiteData(url string) (string, error) {
 	method := "GET"
 
-	client := &http.Client{}
+	client := &http.Client{
+		Timeout: 10 * time.Second,
+	}
 	req, err := http.NewRequest(method, url, nil)
 
 	if err != nil {
-		panic("Error creating request. Here's why: " + err.Error())
+		return "", err
 	}
 	res, err := client.Do(req)
 	if err != nil {
-		panic("Error sending request. Here's why: " + err.Error())
+		return "", err
 	}
 	defer func(Body io.ReadCloser) {
 		err := Body.Close()
@@ -51,16 +69,16 @@ func getWebsiteData(url string) string {
 
 	body, err := ioutil.ReadAll(res.Body)
 	if err != nil {
-		panic("Error reading body. Here's why: " + err.Error())
+		return "", err
 	}
-	return string(body)
+	return string(body), nil
 }
 
-func getWebsiteHash(data string) string {
+func getWebsiteHash(data string) (string, error) {
 	hasher := sha1.New()
 	_, err := hasher.Write([]byte(data))
 	if err != nil {
-		panic("Error hashing website. Here's why: " + err.Error())
+		return "", err
 	}
-	return base64.URLEncoding.EncodeToString(hasher.Sum(nil))
+	return base64.URLEncoding.EncodeToString(hasher.Sum(nil)), nil
 }

@@ -67,7 +67,7 @@ resource "aws_lambda_function" "bot_lambda" {
     }
   }
 
-  timeout = 30
+  timeout = 15
   handler = "main"
   runtime = "go1.x"
   role    = aws_iam_role.lambda_exec.arn

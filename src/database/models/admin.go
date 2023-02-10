@@ -6,9 +6,10 @@ type Admin struct {
 	History  map[string]string `dynamodbav:"history"`
 }
 
-func NewAdmin(chatId int64) Admin {
+func NewAdmin(chatId int64, username string) Admin {
 	return Admin{
-		ChatId:  chatId,
-		History: make(map[string]string),
+		ChatId:   chatId,
+		Username: username,
+		History:  make(map[string]string),
 	}
 }
