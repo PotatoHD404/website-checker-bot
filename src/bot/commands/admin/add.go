@@ -54,7 +54,22 @@ func HandleAddAdmin(env *Env, c telebot.Context, args []string) error {
 		return nil
 	}
 
-	username := c.Sender().Username
+	chat, err := c.Bot().ChatByID(userId)
+	if err != nil {
+		err := c.Reply("Invalid argument")
+		if err != nil {
+			return err
+		}
+		return nil
+	}
+	if chat == nil {
+		err := c.Reply("Invalid argument")
+		if err != nil {
+			return err
+		}
+		return nil
+	}
+	username := chat.Username
 
 	if utils.Contains(admins, NewAdmin(userId, username)) {
 		err := c.Reply("User is already admin")
