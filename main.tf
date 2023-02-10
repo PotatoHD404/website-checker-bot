@@ -142,7 +142,7 @@ resource "aws_dynamodb_table" "admins" {
 
   attribute {
     name = "chat_id"
-    type = "S"
+    type = "N"
   }
 }
 
