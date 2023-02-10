@@ -56,12 +56,32 @@ func (w *Website) CheckChanged() (bool, error) {
 	return false, nil
 }
 
+func removeJunk(data *goquery.Selection) {
+	data.RemoveAttr("class")
+	data.RemoveAttr("id")
+	data.Contents().Each(func(i int, s *goquery.Selection) {
+		if s.Is("script") {
+			s.Remove()
+		} else if s.Is("style") {
+			s.Remove()
+		} else {
+			removeJunk(s)
+		}
+	})
+}
 func getXpathData(data string, xpath string) (string, error) {
 	doc, err := goquery.NewDocumentFromReader(strings.NewReader(data))
 	if err != nil {
 		return "", err
 	}
-	return doc.Find(xpath).Text(), nil
+	// get only body
+	body := doc.Find("body")
+	// remove classes and ids, keep only text recursively
+	removeJunk(body)
+	// remove /html/body from xpath
+	xpath = strings.ReplaceAll(xpath, "/html/body", "")
+
+	return body.Find(xpath).Text(), nil
 }
 
 func getWebsiteData(url string) (string, error) {
