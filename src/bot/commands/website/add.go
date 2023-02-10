@@ -57,6 +57,7 @@ func HandleAddWebsite(env *Env, c telebot.Context, args []string) error {
 	}
 
 	env.Db.AddWebsite(websiteName, websiteUrl)
+	env.Db.AddSubscription(c.Sender().ID, websiteName)
 
 	err := c.Reply("Website added")
 	if err != nil {
