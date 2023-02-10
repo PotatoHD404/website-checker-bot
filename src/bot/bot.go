@@ -36,6 +36,14 @@ func (b *Bot) Init(e *Env) {
 	b.bot.Handle(telebot.OnText, func(c telebot.Context) error {
 		r, _ := regexp.Compile("/([a-z_]+)( [a-z0-9_]+)?")
 		message := c.Text()
+		if !r.MatchString(message) {
+			err := c.Reply("I don't understand you. Use /help to see all available commands.")
+			if err != nil {
+				fmt.Println(err)
+				panic("can't send message")
+			}
+			return nil
+		}
 		command := r.FindStringSubmatch(message)[0]
 		args := r.FindStringSubmatch(message)[1:]
 		switch command {
@@ -63,7 +71,7 @@ func (b *Bot) Init(e *Env) {
 			return HandleGetSubscriptions(e, c, args)
 
 		default:
-			err := c.Reply("I don't understand you")
+			err := c.Reply("There is no such command. Use /help to see all available commands.")
 			if err != nil {
 				fmt.Println(err)
 				panic("can't send message")
