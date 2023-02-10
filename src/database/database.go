@@ -2,6 +2,7 @@ package database
 
 import (
 	"context"
+	"fmt"
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/feature/dynamodb/attributevalue"
@@ -177,18 +178,23 @@ func (db *Db) GetWebsites(withSubscribers bool) []Website {
 	var websites []Website
 	attr := []string{"name", "url"}
 	if withSubscribers {
-		attr = append(attr, "chat_ids")
+		attr = append(attr, "subscribers")
 	}
 	output, err := db.client.Scan(context.TODO(), &dynamodb.ScanInput{
 		TableName:       aws.String(WebsitesTable),
 		AttributesToGet: attr,
 	})
+
+	fmt.Println(output)
+
 	if err != nil {
 		log.Printf("Couldn't get websites. Here's why: %v\n", err)
+		panic(err)
 	} else {
 		err = attributevalue.UnmarshalListOfMaps(output.Items, &websites)
 		if err != nil {
 			log.Printf("Couldn't unmarshal websites. Here's why: %v\n", err)
+			panic(err)
 		}
 		for i := range websites {
 			if websites[i].Subscribers == nil {
@@ -196,6 +202,7 @@ func (db *Db) GetWebsites(withSubscribers bool) []Website {
 			}
 		}
 	}
+	fmt.Println(websites)
 	return websites
 }
 
