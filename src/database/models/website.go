@@ -3,6 +3,7 @@ package models
 import (
 	"crypto/sha1"
 	"encoding/base64"
+	"errors"
 	"github.com/PuerkitoBio/goquery"
 	"io"
 	"io/ioutil"
@@ -106,6 +107,9 @@ func getWebsiteData(url string) (string, error) {
 			panic("Error closing body. Here's why: " + err.Error())
 		}
 	}(res.Body)
+	if res.Status != "200 OK" {
+		return "", errors.New("status code is not 200")
+	}
 
 	body, err := ioutil.ReadAll(res.Body)
 	if err != nil {
