@@ -30,7 +30,7 @@ func (env *Env) CheckWebsites(c *gin.Context) {
 			newWebsite.Hash = website.Hash
 			env.db.UpdateWebsite(newWebsite)
 			for _, subscriber := range newWebsite.Subscribers {
-				_, err := env.bot.Send(&telebot.User{ID: subscriber}, "Website "+newWebsite.Name+" changed!")
+				_, err := env.bot.Send(&telebot.User{ID: subscriber}, "Website changed!\n"+newWebsite.Name+"\n"+newWebsite.Url)
 				if err != nil {
 					fmt.Println("Error sending message to subscriber. Here is why: ", err)
 					return
