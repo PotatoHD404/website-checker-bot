@@ -22,3 +22,5 @@
 /.terraform/
 /.terraform.lock.hcl
 /binaries/
+
+*.html
