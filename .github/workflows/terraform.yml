@@ -38,7 +38,7 @@ jobs:
           mkdir ./binaries
           mkdir ./binaries/bot
           cd ./src
-          env GOOS=linux GOARCH=amd64 go build -o ./../binaries/bot/main .
+          env GOOS=linux CGO_ENABLED=0 GOARCH=amd64 go build -o ./../binaries/bot/main .
       - name: Run Terraform apply
         run: |
           terraform apply -input=false --auto-approve
