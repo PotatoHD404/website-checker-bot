@@ -45,7 +45,7 @@ func HandleAddWebsite(env *Env, c telebot.Context, args []string) error {
 		return nil
 	}
 
-	r := regexp.MustCompile(`^(http|https)://[a-z0-9]+([\-\.][a-z0-9]+)*\.[a-z]{2,5}(:[0-9]{1,5})?(\/.*)?$`)
+	r := regexp.MustCompile(`^(http|https)://[a-z0-9-_]+([\-\.][a-z0-9]+)*\.[a-z]{2,5}(:[0-9]{1,5})?(\/.*)?$`)
 	if !r.MatchString(websiteUrl) {
 		err := c.Reply("Invalid URL")
 		if err != nil {
